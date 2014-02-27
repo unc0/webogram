@@ -178,6 +178,20 @@ angular.module('myApp.controllers', [])
       });
     }
 
+    $scope.openAbout = function () {
+      window.nwgui.Shell.openExternal('https://github.com/zhukov/webogram');
+    }
+
+    $scope.hideWindow = function () {
+      console.log("Minimize webogram");
+      window.nwwin.hide();
+    }
+
+    $scope.closeWindow = function () {
+      console.log("Exit webogram");
+      window.nwwin.close();
+    }
+
     updateCurDialog();
 
     function updateCurDialog() {

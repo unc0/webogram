@@ -113,6 +113,10 @@ fieldset[disabled] .btn-tg.active {
   border-color: #999;
 }
 
+.navbar {
+	position: absolute;
+	width: 100%;
+}
 .tg_page_head .navbar {
   min-height: 44px;
 }

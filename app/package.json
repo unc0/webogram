@@ -1,0 +1,20 @@
+{
+  "main": "index.html",
+  "name": "Webogram",
+  "description": "一个非官方的 Telegram 客户端",
+  "version": "0.1.0",
+  "keywords": [ "telegram", "node-webkit" ],
+  "window": {
+    "title": "Webogram",
+    "icon": "img/Tlogo_2x.png",
+    "toolbar": false,
+    "frame": false,
+    "width": 600,
+    "height": 600,
+    "position": "center",
+    "min_width": 200,
+    "min_height": 300,
+    "max_width": 1920,
+    "max_height": 1080
+  }
+}

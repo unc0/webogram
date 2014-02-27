@@ -6,7 +6,7 @@
 
     <div class="im_dialogs_col_wrap" ng-controller="AppImDialogsController">
       <div class="im_dialogs_search">
-        <input class="form-control im_dialogs_search_field" type="search" placeholder="Search" ng-model="search.query"/>
+        <input class="form-control im_dialogs_search_field" type="search" placeholder="搜索" ng-model="search.query"/>
         <a class="im_dialogs_search_clear" ng-click="search.query = ''" ng-show="search.query.length"></a>
       </div>
       <div my-dialogs-list class="im_dialogs_col">
@@ -21,7 +21,7 @@
     </div>
 
     <div class="im_history_col_wrap" ng-controller="AppImHistoryController">
-      <div ng-if="state.notSelected" class="im_history_not_selected">No history to display</div>
+      <div ng-if="state.notSelected" class="im_history_not_selected">没有相应的历史记录，您可以从左侧选择一个会话。</div>
 
       <div ng-if="state.loaded">
         <div my-history class="im_history_col">
@@ -31,39 +31,39 @@
             <div class="im_history_panel clearfix" ng-controller="AppImPanelController">
               <div class="im_history_panel_title">
 
-                <a class="im_history_panel_info_link pull-right" ng-click="showPeerInfo()">Info</a>
-                <a class="im_history_panel_edit_link pull-right" ng-click="toggleEdit()">Edit</a>
+                <a class="im_history_panel_info_link pull-right" ng-click="showPeerInfo()">相关信息</a>
+                <a class="im_history_panel_edit_link pull-right" ng-click="toggleEdit()">编辑历史记录（本地）</a>
 
                 <div class="dropdown im_history_panel_media_dropdown pull-right">
-                  <a class="dropdown-toggle">Media<i class="icon icon-caret"></i></a>
+                  <a class="dropdown-toggle">群共享<i class="icon icon-caret"></i></a>
                   <ul class="dropdown-menu">
                     <li>
-                      <a ng-click="toggleMedia('photos')">Photos</a>
+                      <a ng-click="toggleMedia('photos')">图片</a>
                     </li>
                     <li>
-                      <a ng-click="toggleMedia('video')">Videos</a>
+                      <a ng-click="toggleMedia('video')">视频</a>
                     </li>
                     <li>
-                      <a ng-click="toggleMedia('documents')">Documents</a>
+                      <a ng-click="toggleMedia('documents')">文档</a>
                     </li>
                   </ul>
                 </div>
                 <a ng-if="mediaType !== false" class="im_history_panel_return_link pull-right" ng-click="toggleMedia()">
-                  Show all messages
+                  返回群聊天
                   <strong class="im_history_panel_return_count" ng-show="missedCount > 0">+{{missedCount}}</strong>
                 </a>
 
                 <h4 ng-if="mediaType !== false" ng-switch="mediaType">
-                  <span ng-switch-when="photos"> Photos </span>
-                  <span ng-switch-when="video"> Videos </span>
-                  <span ng-switch-when="documents"> Documents </span>
+                  <span ng-switch-when="photos"> 图片 </span>
+                  <span ng-switch-when="video"> 视频 </span>
+                  <span ng-switch-when="documents"> 文档 </span>
                 </h4>
 
                 <h4 ng-if="mediaType === false &amp;&amp; historyPeer.id < 0" ng-click="showPeerInfo()">
                   <span ng-bind-html="historyPeer.data.rTitle"></span>
                   <small class="im_chat_users">
                     <ng-pluralize count="historyPeer.data.participants_count"
-                                     when="{'0': 'No members', 'one': '1 member', 'other': '{} members'}">
+                                     when="{'0': '群里没有人', 'one': '群里只有一个人', 'other': '群里有 {} 人'}">
                     </ng-pluralize>
                   </small>
                 </h4>
@@ -79,10 +79,10 @@
 
             <div class="im_edit_panel_wrap clearfix" ng-show="selectActions">
               <a class="im_edit_delete_link" ng-click="selectedDelete()"><i class="icon icon-delete"></i></a>
-              <a class="im_edit_cancel_link" ng-click="selectedCancel()">Cancel</a>
+              <a class="im_edit_cancel_link" ng-click="selectedCancel()">取消选择</a>
               <h4 class="im_edit_panel_title">
                 <ng-pluralize count="selectedCount"
-                                 when="{'0': 'Select messages', 'one': '1 message', 'other': '{} messages'}">
+                                 when="{'0': '已选信息', 'one': '一条', 'other': '{} 条'}">
                 </ng-pluralize>
               </h4>
             </div>
@@ -102,7 +102,7 @@
 
                   <div class="im_history_typing_wrap">
                     <div class="im_history_typing" ng-show="typing.user">
-                      <strong class="im_history_typing_author" ng-bind-html="typing.user.rFullName"></strong> is typing<span my-typing-dots></span>
+                      <strong class="im_history_typing_author" ng-bind-html="typing.user.rFullName"></strong> 正在输入<span my-typing-dots></span>
                     </div>
                   </div>
 
@@ -133,8 +133,8 @@
                   />
                 </div>
                 <form my-send-form draft-message="draftMessage" class="im_send_form" ng-submit="sendMessage($event)">
-                  <div class="im_send_dropbox_wrap"> Drop photos here to send </div>
-                  <textarea ng-model="draftMessage.text" placeholder="Write a message..." class="form-control im_message_field"></textarea>
+                  <div class="im_send_dropbox_wrap"> 将图片拖放到此处发送 </div>
+                  <textarea ng-model="draftMessage.text" placeholder="拍电报……" class="form-control im_message_field"></textarea>
 
                   <div class="im_media_attach pull-right">
                     <input type="file" class="im_media_attach_input" size="28" multiple="true" accept="image/x-png, image/png, image/gif, image/jpeg, video/*, audio/mpeg, audio/mp3" />
@@ -151,7 +151,7 @@
                     <i class="icon icon-emoji"></i>
                   </div>
 
-                  <button type="submit" class="btn btn-tg im_submit">Send</button>
+                  <button type="submit" class="btn btn-tg im_submit">发送</button>
                 </form>
               </div>
 

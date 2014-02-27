@@ -10,36 +10,36 @@
 
         <span class="im_message_service" ng-switch="historyMessage.action['_']">
           <span ng-switch-when="messageActionChatCreate">
-            created the group &laquo;<strong>{{historyMessage.action.title}}</strong>&raquo;
+            建立群 &laquo;<strong>{{historyMessage.action.title}}</strong>&raquo;
           </span>
           <span ng-switch-when="messageActionChatEditTitle">
-            changed group name to  &laquo;<strong>{{historyMessage.action.title}}</strong>&raquo;
+            修改群名字为 &laquo;<strong>{{historyMessage.action.title}}</strong>&raquo;
           </span>
           <span ng-switch-when="messageActionChatEditPhoto">
-            changed group photo
+            修改群图标
           </span>
           <span ng-switch-when="messageActionChatDeletePhoto">
-            removed group photo
+            删除群图标
           </span>
           <span ng-switch-when="messageActionChatAddUser">
             <span ng-if="historyMessage.from_id != historyMessage.action.user_id">
-              invited <a ng-click="openUser(historyMessage.action.user_id)" ng-bind-html="historyMessage.action.user.rFullName"></a>
+              <a ng-click="openUser(historyMessage.action.user_id)" ng-bind-html="historyMessage.action.user.rFullName"></a> 已被邀请
             </span>
             <span ng-if="historyMessage.from_id == historyMessage.action.user_id">
-              returned to group
+              重新加入此群
             </span>
           </span>
           <span ng-switch-when="messageActionChatDeleteUser">
             <span ng-if="historyMessage.from_id != historyMessage.action.user_id">
-              kicked <a ng-click="openUser(historyMessage.action.user_id)" ng-bind-html="historyMessage.action.user.rFullName"></a>
+              <a ng-click="openUser(historyMessage.action.user_id)" ng-bind-html="historyMessage.action.user.rFullName"></a> 已被请出
             </span>
             <span ng-if="historyMessage.from_id == historyMessage.action.user_id">
-              left group
+              退出此群
             </span>
           </span>
 
           <span ng-switch-default>
-            unsupported action {{historyMessage.action}}
+            尚未支持的用户行为 {{historyMessage.action}}
           </span>
         </span>
 
@@ -61,7 +61,7 @@
       <i class="icon icon-select-tick"></i>
 
       <a ng-click="historyMessage.send()" ng-if="historyMessage.error">
-        <i class="icon-message-status icon-message-status-error" tooltip="Try again"></i>
+        <i class="icon-message-status icon-message-status-error" tooltip="重试"></i>
       </a>
       <i class="icon-message-status" ng-class="{'icon-message-status-unread': historyMessage.unread, 'icon-message-status-pending': historyMessage.pending}" ng-if="!historyMessage.error"></i>
 
@@ -83,7 +83,7 @@
 
 
         <div class="im_message_fwd_header" ng-if="historyMessage._ == 'messageForwarded'">
-          Forwarded message from <a class="im_message_fwd_author" ng-click="openUser(historyMessage.fwd_from_id)" ng-bind-html="historyMessage.fwdUser.rFirstName"></a>, <span class="im_message_fwd_date">{{historyMessage.fwd_date | dateOrTime}}</span>
+          转发了 <a class="im_message_fwd_author" ng-click="openUser(historyMessage.fwd_from_id)" ng-bind-html="historyMessage.fwdUser.rFirstName"></a> 的信息, <span class="im_message_fwd_date">{{historyMessage.fwd_date | dateOrTime}}</span>
         </div>
 
         <div class="im_message_media" ng-if="historyMessage.media &amp;&amp; historyMessage.media._ != 'messageMediaEmpty'" ng-switch="historyMessage.media._">
@@ -131,7 +131,7 @@
                 </span>
               </div>
               <div class="im_message_document_actions" ng-if="!historyMessage.media.document.progress.enabled">
-                <a href="" ng-click="openDoc(historyMessage.media.document.id)">Download</a>
+                <a href="" ng-click="openDoc(historyMessage.media.document.id)">下载</a>
               </div>
               <div class="im_message_download_progress_wrap" ng-if="historyMessage.media.document.progress.enabled">
                 <div class="progress tg_down_progress">
@@ -155,7 +155,7 @@
             <div class="im_message_audio_info">
               <div class="im_message_audio_name_wrap" ng-if="!historyMessage.media.audio.url">
                 <span class="im_message_audio_name">
-                  Voice message
+                  语音信息
                 </span>
                 <span class="im_message_audio_duration" ng-if="!historyMessage.media.audio.progress.enabled">
                   {{historyMessage.media.audio.duration | duration}}

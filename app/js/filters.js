@@ -16,7 +16,7 @@ angular.module('myApp.filters', [])
       if (!user || !user.first_name && !user.last_name) {
         return 'DELETED';
       }
-      return user.first_name + ' ' + user.last_name;
+      return user.last_name + ' ' + user.first_name;
     }
   }])
 
@@ -32,13 +32,13 @@ angular.module('myApp.filters', [])
   .filter('userStatus', ['$filter', function($filter) {
     return function (user) {
       if (!user || !user.status || user.status._ == 'userStatusEmpty') {
-        return 'offline';
+        return '离线';
       }
       if (user.status._ == 'userStatusOnline') {
-        return 'online';
+        return '在线';
       }
 
-      return 'last seen ' + $filter('relativeTime')(user.status.was_online);
+      return '距离上次在线 ' + $filter('relativeTime')(user.status.was_online);
     }
   }])
 
@@ -145,13 +145,13 @@ angular.module('myApp.filters', [])
           diff = Math.abs(tsNow() - ticks);
 
       if (diff < 60000) {
-        return 'just now';
+        return '刚刚';
       }
       if (diff < 3000000) {
-        return Math.ceil(diff / 60000) + ' minutes ago';
+        return Math.ceil(diff / 60000) + ' 分钟前';
       }
       if (diff < 10000000) {
-        return Math.ceil(diff / 3600000) + ' hours ago';
+        return Math.ceil(diff / 3600000) + ' 小时前';
       }
       return $filter('dateOrTime')(timestamp);
     }
