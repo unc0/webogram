@@ -1,9 +1,14 @@
 /*!
- * Webogram v0.0.18 - messaging web application for MTProto
+ * Webogram v0.0.19 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
  */
+
+var _logTimer = (new Date()).getTime();
+function dT () {
+  return '[' + (((new Date()).getTime() - _logTimer) / 1000).toFixed(3) + ']';
+}
 
 function checkClick (e, noprevent) {
   if (e.which == 1 && (e.ctrlKey || e.metaKey) || e.which == 2) {
@@ -54,8 +59,9 @@ function onContentLoaded (cb) {
   setTimeout(cb, 0);
 };
 
-function tsNow () {
-  return +new Date();
+function tsNow (seconds) {
+  var t = +new Date();
+  return seconds ? Math.floor(t / 1000) : t;
 }
 
 function safeReplaceObject (wasObject, newObject) {
@@ -68,5 +74,14 @@ function safeReplaceObject (wasObject, newObject) {
     if (newObject.hasOwnProperty(key)) {
       wasObject[key] = newObject[key];
     }
+  }
+}
+
+function safeConfirm (message) {
+  try {
+    return confirm(message);
+  } catch (e) {
+    // Sorry, temp solution until UI boxes are done
+    return true;
   }
 }

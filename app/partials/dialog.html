@@ -1,4 +1,4 @@
-<a class="im_dialog" href="#/im?p={{dialogMessage.peerString}}">
+<a class="im_dialog" ng-click="dialogSelect(dialogMessage.peerString)">
 
   <div class="im_dialog_meta pull-right text-right">
     <div class="im_dialog_date">
@@ -70,7 +70,7 @@
 
         <span ng-switch-when="messageActionChatDeleteUser">
           <span ng-if="dialogMessage.from_id != dialogMessage.action.user_id">
-            <span ng-bind-html="dialogMessage.action.user.rFullName"></span> 已被请出
+            <span ng-bind-html="dialogMessage.action.user.rFullName"></span> 已被移除
           </span>
           <span ng-if="dialogMessage.from_id == dialogMessage.action.user_id">
             退出此群

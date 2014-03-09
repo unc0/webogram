@@ -7,27 +7,55 @@
 
   <div class="modal-body">
 
-    <form name="profileForm" class="settings_profile_edit_form clearfix">
-      <div class="form-group settings_profile_last_name" ng-class="{'has-error': error.field == 'last_name'}">
-        <label class="control-label" for="last_name">
-          <span ng-if="error.field == 'last_name'">名字包含无效字符</span>
-          <span ng-if="error.field != 'last_name'">姓</span>
-        </label>
-        <input type="text" class="form-control" name="last_name" ng-model="profile.last_name" />
+    <div class="clearfix">
+
+      <div class="settings_profile_photo_wrap pull-left">
+
+        <div class="settings_profile_photo">
+          <img
+            class="user_modal_image"
+            my-load-thumb
+            thumb="profile.photo"
+          />
+          <div class="settings_profile_photo_change_wrap">
+            <div ng-if="photo.updating" class="settings_profile_photo_loading">正在更新头像<span my-typing-dots></span></div>
+            <div ng-if="!photo.updating">
+              <div class="settings_profile_photo_update_link">
+                <input my-file-upload  type="file" multiple="false" class="im_attach_input" size="120" multiple="false" accept="image/x-png, image/png, image/gif, image/jpeg" />
+                更换头像
+              </div>
+              <a ng-if="profile.photo.location" href="" ng-click="deletePhoto()" class="settings_profile_photo_delete_link">删除头像图片</a>
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <div class="form-group settings_profile_first_name" ng-class="{'has-error': error.field == 'first_name'}">
-        <label class="control-label" for="first_name">
-          <span ng-if="error.field == 'first_name'">名字包含无效字符</span>
-          <span ng-if="error.field != 'first_name'">名</span>
-        </label>
-        <input type="text" class="form-control" name="first_name" ng-model="profile.first_name" required />
-      </div>
+      <form my-settings-form name="profileForm" class="settings_profile_edit_form">
 
-      <div class="settings_profile_save">
-        <button class="btn btn-link settings_profile_save_btn" ng-click="save(profileForm)" ng-disabled="profileForm.$invalid || (!profileForm.last_name.$dirty &amp;&amp; !profileForm.first_name.$dirty)">保存</button>
-      </div>
-    </form>
+        <div class="form-group settings_profile_last_name" ng-class="{'has-error': error.field == 'last_name'}">
+          <label class="control-label" for="last_name">
+            <span ng-if="error.field == 'last_name'">姓名包含非法字符</span>
+            <span ng-if="error.field != 'last_name'">姓</span>
+          </label>
+          <input type="text" class="form-control" name="last_name" ng-model="profile.last_name" />
+        </div>
+
+        <div class="form-group settings_profile_first_name" ng-class="{'has-error': error.field == 'first_name'}">
+          <label class="control-label" for="first_name">
+            <span ng-if="error.field == 'first_name'">姓名包含非法字符</span>
+            <span ng-if="error.field != 'first_name'">名</span>
+          </label>
+          <input type="text" class="form-control" name="first_name" ng-model="profile.first_name" required />
+        </div>
+
+        <div class="settings_profile_save">
+          <button class="btn btn-link settings_profile_save_btn" ng-click="save(profileForm)" ng-disabled="profileForm.$invalid || (!profileForm.last_name.$dirty &amp;&amp; !profileForm.first_name.$dirty)">保存</button>
+        </div>
+
+      </form>
+
+    </div>
 
     <form class="settings_send_choose_form">
       <div class="radio">
@@ -61,7 +89,7 @@
 
     <p>
       <strong>版本：</strong>
-      <span class="settings_version">alpha 0.0.18</span>
+      <span class="settings_version">alpha 0.0.19</span>
     </p>
 
     <hr/>

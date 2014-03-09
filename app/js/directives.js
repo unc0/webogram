@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.0.18 - messaging web application for MTProto
+ * Webogram v0.0.19 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -81,17 +81,62 @@ angular.module('myApp.directives', ['myApp.filters'])
 
 
       function updateSizes () {
-        $(element).css({
-          height: $($window).height() - footer.offsetHeight - (headWrap ? headWrap.offsetHeight : 50) - 72
-        });
-        if (!headWrap) {
+        if (attrs.modal) {
+          $(element).css({
+            height: $($window).height() - 200
+          });
+          updateScroller();
+          return;
+        }
+
+        if (!headWrap || !headWrap.offsetHeight) {
           headWrap = $('.tg_page_head')[0];
         }
+        if (!footer || !footer.offsetHeight) {
+          footer = $('.im_page_footer')[0];
+        }
+        $(element).css({
+          height: $($window).height() - footer.offsetHeight - (headWrap ? headWrap.offsetHeight : 44) - 72
+        });
+
+        updateScroller();
       }
 
       $($window).on('resize', updateSizes);
 
       updateSizes();
+      setTimeout(updateSizes, 1000);
+    };
+
+  })
+
+  .directive('myContactsList', function($window, $timeout) {
+
+    return {
+      link: link
+    };
+
+    function link (scope, element, attrs) {
+      var searchWrap = $('.contacts_modal_search')[0],
+          panelWrap = $('.contacts_modal_panel')[0],
+          contactsWrap = $('.contacts_wrap', element)[0];
+
+      onContentLoaded(function () {
+        $(contactsWrap).nanoScroller({preventPageScrolling: true, tabIndex: -1, iOSNativeScrolling: true});
+        updateSizes();
+      });
+
+      function updateSizes () {
+        $(element).css({
+          height: $($window).height() - (panelWrap && panelWrap.offsetHeight || 0) - (searchWrap && searchWrap.offsetHeight || 0) - 200
+        });
+        $(contactsWrap).nanoScroller();
+      }
+
+      $($window).on('resize', updateSizes);
+      scope.$on('contacts_change', function () {
+        onContentLoaded(updateSizes)
+      });
     };
 
   })
@@ -108,7 +153,7 @@ angular.module('myApp.directives', ['myApp.filters'])
           scrollableWrap = $('.im_history_scrollable_wrap', element)[0],
           scrollable = $('.im_history_scrollable', element)[0],
           panelWrap = $('.im_history_panel_wrap', element)[0],
-          sendPanelWrap = $('.im_send_panel_wrap', element)[0],
+          bottomPanelWrap = $('.im_bottom_panel_wrap', element)[0],
           sendFormWrap = $('.im_send_form_wrap', element)[0],
           headWrap = $('.tg_page_head')[0],
           footer = $('.im_page_footer')[0],
@@ -204,21 +249,9 @@ angular.module('myApp.directives', ['myApp.filters'])
       });
 
       scope.$on('ui_panel_update', function () {
-        var h = $(historyWrap).height();
-        $(panelWrap).addClass('im_panel_to_top');
         onContentLoaded(function () {
-          $(panelWrap).removeClass('im_panel_to_top');
-          updateSizes(true);
-
-          var newH = $(historyWrap).height();
-
-          if (atBottom) {
-            scrollableWrap.scrollTop = scrollableWrap.scrollHeight;
-            updateScroller();
-          } else {
-            scrollableWrap.scrollTop -= newH - h;
-            updateScroller();
-          }
+          updateSizes();
+          scope.$broadcast('ui_message_send');
         });
       });
 
@@ -241,11 +274,19 @@ angular.module('myApp.directives', ['myApp.filters'])
       });
 
       function updateSizes (heightOnly) {
-        $(sendFormWrap).css({
-          height: $(sendForm).height()
-        });
+        if ($(sendFormWrap).is(':visible')) {
+          $(sendFormWrap).css({
+            height: $(sendForm).height()
+          });
+        }
 
-        var historyH = $($window).height() - panelWrap.offsetHeight - sendPanelWrap.offsetHeight - headWrap.offsetHeight - footer.offsetHeight;
+        if (!headWrap || !headWrap.offsetHeight) {
+          headWrap = $('.tg_page_head')[0];
+        }
+        if (!footer || !footer.offsetHeight) {
+          footer = $('.im_page_footer')[0];
+        }
+        var historyH = $($window).height() - panelWrap.offsetHeight - bottomPanelWrap.offsetHeight - (headWrap ? headWrap.offsetHeight : 44) - footer.offsetHeight;
         $(historyWrap).css({
           height: historyH
         });
@@ -265,6 +306,7 @@ angular.module('myApp.directives', ['myApp.filters'])
 
       $($window).on('resize', updateSizes);
 
+      updateSizes();
       onContentLoaded(updateSizes);
     }
 
@@ -461,14 +503,21 @@ angular.module('myApp.directives', ['myApp.filters'])
     function link (scope, element, attrs) {
       var counter = 0;
 
-      var cachedSrc = MtpApiFileManager.getCachedFile(scope.thumb && scope.thumb.location);
+      var cachedSrc = MtpApiFileManager.getCachedFile(
+        scope.thumb &&
+        scope.thumb.location &&
+        !scope.thumb.location.empty &&
+        scope.thumb.location
+      );
+
       if (cachedSrc) {
         element.attr('src', cachedSrc);
       }
 
-      scope.$watch('thumb.location', function (newLocation) {
+      scope.$watchCollection('thumb.location', function (newLocation) {
+        // console.log('new loc', newLocation, arguments);
         var counterSaved = ++counter;
-        if (!newLocation) {
+        if (!newLocation || newLocation.empty) {
           element.attr('src', scope.thumb && scope.thumb.placeholder || 'img/blank.gif');
           return;
         }
@@ -479,7 +528,9 @@ angular.module('myApp.directives', ['myApp.filters'])
           return;
         }
 
-        element.attr('src', scope.thumb.placeholder || 'img/blank.gif');
+        if (!element.attr('src')) {
+          element.attr('src', scope.thumb.placeholder || 'img/blank.gif');
+        }
 
         MtpApiFileManager.downloadSmallFile(scope.thumb.location, scope.thumb.size).then(function (url) {
           if (counterSaved == counter) {
@@ -607,7 +658,7 @@ angular.module('myApp.directives', ['myApp.filters'])
             />\
           </div>\
           <div class="video_full_player" ng-if="player.src">\
-            <embed ng-src="{{player.src}}" width="{{video.full.width}}" height="{{video.full.height}}" autoplay="true" CONTROLLER="TRUE" loop="false" pluginspace="http://www.apple.com/quicktime/" ng-if="player.quicktime"/>\
+            <embed ng-src="{{player.src}}" width="{{video.full.width}}" height="{{video.full.height}}" autoplay="true" CONTROLLER="TRUE" SHOWCONTROLS="TRUE" controller="true" loop="false" pluginspace="http://www.apple.com/quicktime/" ng-if="player.quicktime"/>\
             <video width="{{video.full.width}}" height="{{video.full.height}}" controls autoplay  ng-if="!player.quicktime">\
               <source ng-src="{{player.src}}" type="video/mp4">\
             </video>\
@@ -634,13 +685,13 @@ angular.module('myApp.directives', ['myApp.filters'])
       };
 
       var hasQt = false, i;
-      // if (navigator.plugins) {
-      //   for (i = 0; i < navigator.plugins.length; i++) {
-      //     if (navigator.plugins[i].name.indexOf('QuickTime') >= 0) {
-      //       hasQt = true;
-      //     }
-      //   }
-      // }
+      if (navigator.plugins) {
+        for (i = 0; i < navigator.plugins.length; i++) {
+          if (navigator.plugins[i].name.indexOf('QuickTime') >= 0) {
+            hasQt = true;
+          }
+        }
+      }
 
       MtpApiFileManager.downloadFile(scope.video.dc_id, inputLocation, scope.video.size, null, {mime: 'video/mp4'}).then(function (url) {
         scope.progress.enabled = false;
@@ -711,7 +762,11 @@ angular.module('myApp.directives', ['myApp.filters'])
         } else if (time % 1000 <= 600) {
           cnt = 2;
         }
-        element.html((new Array(cnt + 1)).join('.'));
+
+        var text = '...',
+            html = text.substr(0, cnt + 1) + (cnt < 2 ? ('<span class="text-invisible">' + text.substr(cnt + 1) + '</span>') : '');
+
+        element.html(html);
       }, 200);
 
       scope.$on('$destroy', function cleanup() {
@@ -748,5 +803,26 @@ angular.module('myApp.directives', ['myApp.filters'])
           element[0].focus();
         }, 100);
       }
+    };
+  })
+
+  .directive('myFileUpload', function(){
+
+    return {
+      link: link
+    };
+
+    function link(scope, element, attrs) {
+      element.on('change', function () {
+        var self = this;
+        scope.$apply(function () {
+          scope.photo.file = self.files[0];
+          setTimeout(function () {
+            try {
+              self.value = '';
+            } catch (e) {};
+          }, 1000);
+        });
+      });
     };
   });

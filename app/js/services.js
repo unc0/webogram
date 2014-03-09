@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.0.18 - messaging web application for MTProto
+ * Webogram v0.0.19 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -14,7 +14,8 @@ angular.module('myApp.services', [])
 .service('AppConfigManager', function ($q) {
   var testPrefix = window._testMode ? 't_' : '';
   var cache = {};
-  var useLs = !window.chrome || !chrome.storage || !chrome.storage.local;
+  var useCs = !!(window.chrome && chrome.storage && chrome.storage.local);
+  var useLs = !useCs && !!window.localStorage;
 
   function getValue() {
     var keys = Array.prototype.slice.call(arguments),
@@ -34,6 +35,9 @@ angular.module('myApp.services', [])
         var value = localStorage.getItem(key);
         value = (value === undefined || value === null) ? false : JSON.parse(value);
         result.push(cache[key] = value);
+      }
+      else if (!useCs) {
+        result.push(cache[key] = false);
       }
       else {
         allFound = false;
@@ -74,6 +78,10 @@ angular.module('myApp.services', [])
       return $q.when();
     }
 
+    if (!useCs) {
+      return $q.when();
+    }
+
     var deferred = $q.defer();
 
     chrome.storage.local.set(keyValues, function () {
@@ -102,6 +110,10 @@ angular.module('myApp.services', [])
       return $q.when();
     }
 
+    if (!useCs) {
+      return $q.when();
+    }
+
     var deferred = $q.defer();
 
     chrome.storage.local.remove(keys, function () {
@@ -118,8 +130,9 @@ angular.module('myApp.services', [])
   };
 })
 
-.service('AppUsersManager', function ($rootScope, $modal, $modalStack, MtpApiFileManager, MtpApiManager, RichTextProcessor, SearchIndexManager) {
+.service('AppUsersManager', function ($rootScope, $modal, $modalStack, $filter, MtpApiFileManager, MtpApiManager, RichTextProcessor, SearchIndexManager) {
   var users = {},
+      cachedPhotoLocations = {},
       contactsFillPromise,
       contactsIndex = SearchIndexManager.createIndex();
 
@@ -180,21 +193,29 @@ angular.module('myApp.services', [])
       return;
     }
 
+    if (apiUser.phone) {
+      apiUser.rPhone = $filter('phoneNumber')(apiUser.phone);
+    }
+
     if (apiUser.first_name) {
       apiUser.rFirstName = RichTextProcessor.wrapRichText(apiUser.first_name, {noLinks: true, noLinebreaks: true});
       apiUser.rFullName = RichTextProcessor.wrapRichText(apiUser.first_name + ' ' + (apiUser.last_name || ''), {noLinks: true, noLinebreaks: true});
     } else {
-      apiUser.rFirstName = RichTextProcessor.wrapRichText(apiUser.last_name, {noLinks: true, noLinebreaks: true}) || 'DELETED';
-      apiUser.rFullName = RichTextProcessor.wrapRichText(apiUser.last_name, {noLinks: true, noLinebreaks: true}) || 'DELETED';
+      apiUser.rFirstName = RichTextProcessor.wrapRichText(apiUser.last_name, {noLinks: true, noLinebreaks: true}) || apiUser.rPhone || 'DELETED';
+      apiUser.rFullName = RichTextProcessor.wrapRichText(apiUser.last_name, {noLinks: true, noLinebreaks: true}) || apiUser.rPhone || 'DELETED';
     }
-    apiUser.sortName = $.trim((apiUser.last_name || '') + ' ' + apiUser.first_name);
+    apiUser.sortName = SearchIndexManager.cleanSearchText(apiUser.first_name + ' ' + (apiUser.last_name || ''));
     apiUser.sortStatus = apiUser.status && (apiUser.status.expires || apiUser.status.was_online) || 0;
 
 
     if (users[apiUser.id] === undefined) {
       users[apiUser.id] = apiUser;
     } else {
-      angular.extend(users[apiUser.id], apiUser);
+      safeReplaceObject(users[apiUser.id], apiUser);
+    }
+
+    if (cachedPhotoLocations[apiUser.id] !== undefined) {
+      safeReplaceObject(cachedPhotoLocations[apiUser.id], apiUser && apiUser.photo && apiUser.photo.photo_small || {empty: true});
     }
   };
 
@@ -218,9 +239,16 @@ angular.module('myApp.services', [])
       }
     };
 
+    if (cachedPhotoLocations[id] === undefined) {
+      cachedPhotoLocations[id] = user && user.photo && user.photo.photo_small || {empty: true};
+    }
+
+    var num = (Math.abs(id) % 8) + 1;
+
     return {
-      placeholder: 'img/placeholders/' + placeholder + 'Avatar'+((Math.abs(id) % 8) + 1)+'@2x.png',
-      location: user && user.photo && user.photo.photo_small
+      num: num,
+      placeholder: 'img/placeholders/' + placeholder + 'Avatar' + num + '@2x.png',
+      location: cachedPhotoLocations[id]
     };
   }
 
@@ -264,15 +292,7 @@ angular.module('myApp.services', [])
       templateUrl: 'partials/user_modal.html?2',
       controller: 'UserModalController',
       scope: scope,
-      windowClass: 'user_modal_window',
-      resolve: {
-        userFull: MtpApiManager.invokeApi('users.getFullUser', {
-          id: getUserInput(userID)
-        }).then(function (result) {
-          saveApiUser(result.user);
-          return result;
-        })
-      }
+      windowClass: 'user_modal_window'
     });
   }
 
@@ -294,7 +314,12 @@ angular.module('myApp.services', [])
       case 'updateUserPhoto':
         var userID = update.user_id;
         if (users[userID]) {
-          users[userID].photo = update.photo;
+          safeReplaceObject(users[userID].photo, update.photo);
+
+          if (cachedPhotoLocations[userID] !== undefined) {
+            safeReplaceObject(cachedPhotoLocations[userID], update.photo && update.photo.photo_small || {empty: true});
+          }
+
           $rootScope.$broadcast('user_update', userID);
         }
         break;
@@ -317,7 +342,8 @@ angular.module('myApp.services', [])
 })
 
 .service('AppChatsManager', function ($rootScope, $modal, MtpApiFileManager, MtpApiManager, AppUsersManager, RichTextProcessor) {
-  var chats = {};
+  var chats = {},
+      cachedPhotoLocations = {};
 
   function saveApiChats (apiChats) {
     angular.forEach(apiChats, saveApiChat);
@@ -331,7 +357,11 @@ angular.module('myApp.services', [])
     if (chats[apiChat.id] === undefined) {
       chats[apiChat.id] = apiChat;
     } else {
-      angular.extend(chats[apiChat.id], apiChat);
+      safeReplaceObject(chats[apiChat.id], apiChat);
+    }
+
+    if (cachedPhotoLocations[apiChat.id] !== undefined) {
+      safeReplaceObject(cachedPhotoLocations[apiChat.id], apiChat && apiChat.photo && apiChat.photo.photo_small || {empty: true});
     }
   };
 
@@ -346,9 +376,13 @@ angular.module('myApp.services', [])
   function getChatPhoto(id, placeholder) {
     var chat = getChat(id);
 
+    if (cachedPhotoLocations[id] === undefined) {
+      cachedPhotoLocations[id] = chat && chat.photo && chat.photo.photo_small || {empty: true};
+    }
+
     return {
       placeholder: 'img/placeholders/' + placeholder + 'Avatar'+((Math.abs(id) % 4) + 1)+'@2x.png',
-      location: chat && chat.photo && chat.photo.photo_small
+      location: cachedPhotoLocations[id]
     };
   }
 
@@ -361,11 +395,15 @@ angular.module('myApp.services', [])
     var chatFull = angular.copy(fullChat),
         chat = getChat(id);
 
+
     if (chatFull.participants && chatFull.participants._ == 'chatParticipants') {
-      angular.forEach(chatFull.participants.participants, function(participant){
-        participant.user = AppUsersManager.getUser(participant.user_id);
-        participant.userPhoto = AppUsersManager.getUserPhoto(participant.user_id, 'User');
-        participant.inviter = AppUsersManager.getUser(participant.inviter_id);
+      MtpApiManager.getUserID().then(function (myID) {
+        angular.forEach(chatFull.participants.participants, function(participant){
+          participant.user = AppUsersManager.getUser(participant.user_id);
+          participant.userPhoto = AppUsersManager.getUserPhoto(participant.user_id, 'User');
+          participant.inviter = AppUsersManager.getUser(participant.inviter_id);
+          participant.canKick = myID != participant.user_id && (myID == chatFull.participants.admin_id || myID == participant.inviter_id);
+        });
       });
     }
 
@@ -474,11 +512,21 @@ angular.module('myApp.services', [])
 
 .service('SearchIndexManager', function () {
   var badCharsRe = /[`~!@#$%^&*()\-_=+\[\]\\|{}'";:\/?.>,<\s]+/g,
-      trimRe = /^\s+|\s$/g;
+      trimRe = /^\s+|\s$/g,
+      accentsReplace = {
+        a: /[áâäà]/g,
+        e: /[éêëè]/g,
+        i: /[íîïì]/g,
+        o: /[óôöò]/g,
+        u: /[úûüù]/g,
+        c: /ç/g,
+        ss: /ß/g
+      }
 
   return {
     createIndex: createIndex,
     indexObject: indexObject,
+    cleanSearchText: cleanSearchText,
     search: search
   };
 
@@ -489,12 +537,24 @@ angular.module('myApp.services', [])
     }
   }
 
+  function cleanSearchText (text) {
+    text = text.replace(badCharsRe, ' ').replace(trimRe, '').toLowerCase();
+
+    for (var key in accentsReplace) {
+      if (accentsReplace.hasOwnProperty(key)) {
+        text = text.replace(accentsReplace[key], key);
+      }
+    }
+
+    return text;
+  }
+
   function indexObject (id, searchText, searchIndex) {
     if (searchIndex.fullTexts[id] !== undefined) {
       return false;
     }
 
-    searchText = searchText.replace(badCharsRe, ' ').replace(trimRe, '').toLowerCase();
+    searchText = cleanSearchText(searchText);
 
     if (!searchText.length) {
       return false;
@@ -523,7 +583,7 @@ angular.module('myApp.services', [])
     var shortIndexes = searchIndex.shortIndexes,
         fullTexts = searchIndex.fullTexts;
 
-    query = query.replace(badCharsRe, ' ').replace(trimRe, '').toLowerCase();
+    query = cleanSearchText(query);
 
     var queryWords = query.split(' '),
         foundObjs = false,
@@ -1126,6 +1186,28 @@ angular.module('myApp.services', [])
     pendingByRandomID[randomIDS] = [peerID, messageID];
   }
 
+  function forwardMessages (msgIDs, inputPeer) {
+    return MtpApiManager.invokeApi('messages.forwardMessages', {
+      peer: inputPeer,
+      id: msgIDs
+    }).then(function (forwardResult) {
+      AppUsersManager.saveApiUsers(forwardResult.users);
+      AppChatsManager.saveApiChats(forwardResult.chats);
+
+      if (ApiUpdatesManager.saveSeq(forwardResult.seq)) {
+        angular.forEach(forwardResult.messages, function(apiMessage) {
+
+          ApiUpdatesManager.saveUpdate({
+            _: 'updateNewMessage',
+            message: apiMessage,
+            pts: forwardResult.pts
+          });
+
+        });
+      }
+
+    });
+  };
 
   function finalizePendingMessage(randomID, finalMessage) {
     var pendingData = pendingByRandomID[randomID];
@@ -1178,7 +1260,7 @@ angular.module('myApp.services', [])
     if (toID < 0) {
       return toID;
     } else if (message.out) {
-      return toID
+      return toID;
     }
     return message.from_id;
   }
@@ -1533,6 +1615,7 @@ angular.module('myApp.services', [])
     saveMessages: saveMessages,
     sendText: sendText,
     sendFile: sendFile,
+    forwardMessages: forwardMessages,
     getMessagePeer: getMessagePeer,
     wrapForDialog: wrapForDialog,
     wrapForHistory: wrapForHistory
@@ -2171,6 +2254,7 @@ angular.module('myApp.services', [])
   var emojiUtf = [],
       emojiMap = {},
       emojiData = Config.Emoji,
+      emojiIconSize = 18,
       emojiCode;
 
   for (emojiCode in emojiData) {
@@ -2192,8 +2276,21 @@ angular.module('myApp.services', [])
       }).
       replace(/</g, '&lt;').
       replace(/>/g, '&gt;');
-  };
+  }
 
+  function getEmojiSpritesheetCoords(emojiCode) {
+    var i, row, column, totalColumns;
+    for (var cat = 0; cat < Config.EmojiCategories.length; cat++) {
+      totalColumns = Config.EmojiCategorySpritesheetDimens[cat][1];
+      i = Config.EmojiCategories[cat].indexOf(emojiCode);
+      if (i > -1) {
+        row = Math.floor(i / totalColumns);
+        column = (i % totalColumns);
+        return { category: cat, row: row, column: column };
+      }
+    }
+    return null;
+  }
 
   function wrapRichText(text, options) {
     if (!text || !text.length) {
@@ -2208,9 +2305,9 @@ angular.module('myApp.services', [])
         raw = text,
         html = [],
         url,
+        emojiFound = false,
         emojiTitle,
-        emojiFound = false;
-
+        emojiCoords;
 
     while ((match = raw.match(regExp))) {
       // console.log(2, match);
@@ -2231,7 +2328,7 @@ angular.module('myApp.services', [])
               '<a href="',
               encodeEntities(match[2] + '://' + match[4]),
               '" target="_blank">',
-              encodeEntities((match[2] != 'http' ? match[2] + '://' : '') + match[4]),
+              encodeEntities(match[2] + '://' + match[4]),
               '</a>'
             );
           }
@@ -2251,14 +2348,17 @@ angular.module('myApp.services', [])
         if (emojiCode = emojiMap[match[6]]) {
           emojiFound = true;
           emojiTitle = encodeEntities(emojiData[emojiCode][1][0]);
+          emojiCoords = getEmojiSpritesheetCoords(emojiCode);
           html.push(
-            '<span class="emoji emoji-file-',
-            encodeEntities(emojiCode),
-            '" title="',
-            emojiTitle,
-            '">:',
-            emojiTitle,
-            ':</span>'
+            '<span class="emoji emoji-',
+            emojiCoords.category,
+            '-',
+            (emojiIconSize * emojiCoords.column),
+            '-',
+            (emojiIconSize * emojiCoords.row),
+            '" ',
+            'title="',emojiTitle, '">',
+            ':', emojiTitle, ':</span>'
           );
         } else {
           html.push(encodeEntities(match[6]));
@@ -2274,8 +2374,8 @@ angular.module('myApp.services', [])
     // console.log(3, text, html);
 
     if (emojiFound) {
-      text = text.replace(/<span class="emoji emoji-file-([0-9a-f]+?)"(.+?)<\/span>/g,
-                          '<span class="emoji" style="background-image: url(\'vendor/gemoji/images/$1.png\')"$2</span>');
+      text = text.replace(/<span class="emoji emoji-(\d)-(\d+)-(\d+)"(.+?)<\/span>/g,
+                          '<span class="emoji emoji-spritesheet-$1" style="background-position: -$2px -$3px;" $4</span>');
     }
 
     // console.log(4, text, html);
@@ -2345,13 +2445,15 @@ angular.module('myApp.services', [])
     if (!started) {
       started = true;
       $rootScope.$watch('idle.isIDLE', checkIDLE);
+      $rootScope.$watch('offline', checkIDLE);
     }
   }
 
   function sendUpdateStatusReq(offline) {
     var date = tsNow();
     if (offline && !lastOnlineUpdated ||
-        !offline && (date - lastOnlineUpdated) < 50000) {
+        !offline && (date - lastOnlineUpdated) < 50000 ||
+        $rootScope.offline) {
       return;
     }
     lastOnlineUpdated = offline ? 0 : date;
@@ -2589,5 +2691,56 @@ angular.module('myApp.services', [])
   return {
     showError: showError,
     showSimpleError: showSimpleError
+  }
+})
+
+
+
+.service('PeersSelectService', function ($rootScope, $modal) {
+
+  function selectPeer () {
+    var scope = $rootScope.$new();
+    // angular.extend(scope, params);
+
+    return $modal.open({
+      templateUrl: 'partials/peer_select.html',
+      controller: 'PeerSelectController',
+      scope: scope,
+      windowClass: 'peer_select_window'
+    }).result;
+  }
+
+
+  return {
+    selectPeer: selectPeer
+  }
+})
+
+
+.service('ContactsSelectService', function ($rootScope, $modal) {
+
+  function select (multiSelect, options) {
+    options = options || {};
+
+    var scope = $rootScope.$new();
+    scope.multiSelect = multiSelect;
+    angular.extend(scope, options);
+
+    return $modal.open({
+      templateUrl: 'partials/contacts_modal.html',
+      controller: 'ContactsModalController',
+      scope: scope,
+      windowClass: 'contacts_modal_window'
+    }).result;
+  }
+
+
+  return {
+    selectContacts: function (options) {
+      return select (true, options);
+    },
+    selectContact: function (options) {
+      return select (false, options);
+    },
   }
 })

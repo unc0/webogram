@@ -11,8 +11,8 @@
       <label class="control-label" for="phone_number" ng-if="error.field == 'phone'">很抱歉，您输入的手机号码格式有误，请检查。</label>
       <input type="tel" class="form-control" name="phone_number" ng-model="credentials.phone_number" placeholder="请输入您的电话号码" required>
     </div>
-    <button class="btn btn-tg btn-block" ng-class="{disabled: progress.enabled}" ng-disabled="progress.enabled" type="submit">
-      {{progress.enabled ? '正在生成密钥……' : '下一步'}}
+    <button class="btn btn-success btn-block" ng-class="{disabled: progress.enabled}" ng-disabled="progress.enabled" type="submit">
+			{{progress.enabled ? '正在生成密钥……' : '下一步'}}
     </button>
   </form>
 
@@ -31,8 +31,8 @@
       <input type="number" maxlength="5" class="form-control" name="phone_code" ng-model="credentials.phone_code" placeholder="请输入验证码" required>
     </div>
 
-    <button class="btn btn-tg btn-block" type="submit" ng-class="{disabled: progress.enabled}" ng-disabled="progress.enabled">
-      {{progress.enabled ? '正在检查验证码……' : '登入'}}
+    <button class="btn btn-success btn-block" type="submit" ng-class="{disabled: progress.enabled}" ng-disabled="progress.enabled">
+			{{progress.enabled ? '正在检查验证码……' : '登入'}}
     </button>
   </form>
 </div>

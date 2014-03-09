@@ -7,15 +7,34 @@
 
   <div class="modal-body">
 
-    <div class="chat_modal_image_wrap pull-left">
-      <img
-        class="chat_modal_image"
-        my-load-thumb
-        thumb="chatFull.thumb"/>
+    <div class="chat_modal_photo_wrap pull-left">
+
+      <div class="chat_modal_photo">
+        <img
+          class="user_modal_image"
+          my-load-thumb
+          thumb="chatFull.thumb"
+        />
+        <div class="chat_modal_photo_change_wrap" ng-if="chatFull.chat._ != 'chatForbidden' &amp;&amp; !chatFull.chat.left">
+          <div ng-if="photo.updating" class="chat_modal_photo_loading">正在更新头像<span my-typing-dots></span></div>
+          <div ng-if="!photo.updating">
+            <div class="chat_modal_photo_update_link">
+              <input my-file-upload  type="file" multiple="false" class="im_attach_input" size="120" multiple="false" accept="image/x-png, image/png, image/gif, image/jpeg" />
+              更换头像
+            </div>
+            <a ng-if="chatFull.thumb.location" href="" ng-click="deletePhoto()" class="chat_modal_photo_delete_link">删除头像图片</a>
+          </div>
+        </div>
+      </div>
+
     </div>
 
+
     <div class="chat_modal_info_wrap clearfix">
-      <h4 class="chat_modal_header" ng-bind-html="chatFull.chat.rTitle"></h4>
+      <h4 class="chat_modal_header">
+        <a href="" ng-if="chatFull.chat._ != 'chatForbidden' &amp;&amp; !chatFull.chat.left" ng-click="editTitle()" ng-bind-html="chatFull.chat.rTitle"></a>
+        <span ng-if="chatFull.chat._ == 'chatForbidden' || chatFull.chat.left" ng-bind-html="chatFull.chat.rTitle"></span>
+      </h4>
       <p class="chat_modal_members_count" ng-if="chatFull.chat.participants_count > 0">
         <ng-pluralize count="chatFull.chat.participants_count"
                          when="{'0': '群里没人', 'one': '群里只有一个人', 'other': '群里有 {} 人'}">
@@ -30,10 +49,6 @@
           </a>
         </div>
 
-        <div class="chat_modal_clear">
-          <a href="" ng-click="flushHistory()">清除历史记录</a>
-        </div>
-
         <div class="chat_modal_leave_join" ng-if="chatFull.chat._ != 'chatForbidden'">
           <div class="chat_modal_leave"  ng-if="!chatFull.chat.left">
             <a href="" ng-click="leaveGroup()">退出群</a>
@@ -41,14 +56,19 @@
           <div class="chat_modal_leave" ng-if="chatFull.chat.left">
             <a href="" ng-click="returnToGroup()">重新加入此群</a>
           </div>
+
         </div>
       </div>
     </div>
 
-    <h5 class="chat_modal_members_header">群成员</h5>
+    <h5 class="chat_modal_members_header">
+      <a href="" ng-click="inviteToGroup()" ng-if="!chatFull.chat.left &amp;&amp; chatFull.participants.participants.length" class="pull-right">添加新成员</a>
+      群成员
+    </h5>
     <div class="chat_modal_members_list">
 
       <div class="chat_modal_participant_wrap clearfix" ng-repeat="participant in chatFull.participants.participants | orderBy:'-user.sortStatus'">
+        <a ng-if="participant.canKick" ng-click="kickFromGroup(participant.user_id)"  class="chat_modal_participant_kick pull-right">移除成员</a>
         <a ng-click="openUser(participant.user_id)" class="chat_modal_participant_photo pull-left">
           <img
             class="chat_modal_participant_photo"
