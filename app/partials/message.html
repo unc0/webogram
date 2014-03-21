@@ -1,3 +1,9 @@
+<div class="im_message_unread_split" ng-if="historyUnread &amp;&amp; historyUnread.beforeID == historyMessage.id">
+  <ng-pluralize count="historyUnread.count"
+                   when="{'one': '1 unread message', 'other': '{} unread messages'}">
+  </ng-pluralize>
+</div>
+
 <div class="im_message_outer_wrap" ng-class="{im_message_selected: selectedMsgs[historyMessage.id]}" ng-click="toggleMessage(historyMessage.id, $event.target)">
 
 
@@ -114,11 +120,19 @@
             </div>
           </a>
 
-          <div ng-switch-when="messageMediaDocument" class="im_message_document">
-            <a href="" ng-click="openDoc(historyMessage.media.document.id)" ng-if="!historyMessage.media.document.progress.enabled">
-              <i class="icon icon-document"></i>
+          <div ng-switch-when="messageMediaDocument" class="im_message_document" ng-class="{im_message_document_thumbed: !!historyMessage.media.document.thumb}">
+            <a href="" ng-click="openDoc(historyMessage.media.document.id, false, historyMessage.media.document.withPreview)" ng-class="{im_message_document_link_disabled: historyMessage.media.document.progress.enabled}">
+              <i class="icon icon-document" ng-if="!historyMessage.media.document.thumb"></i>
+              <div class="im_message_document_thumb_wrap" ng-if="historyMessage.media.document.thumb">
+                <img
+                  class="im_message_document_thumb"
+                  my-load-thumb
+                  thumb="historyMessage.media.document.thumb"
+                  width="{{historyMessage.media.document.thumb.width}}"
+                  height="{{historyMessage.media.document.thumb.height}}"
+                />
+              </div>
             </a>
-            <i class="icon icon-document" ng-if="historyMessage.media.document.progress.enabled"></i>
 
             <div class="im_message_document_info">
               <div class="im_message_document_name_wrap">
@@ -134,6 +148,7 @@
               </div>
               <div class="im_message_document_actions" ng-if="!historyMessage.media.document.progress.enabled">
                 <a href="" ng-click="openDoc(historyMessage.media.document.id)">下载</a>
+                <a href="" ng-click="openDoc(historyMessage.media.document.id, false, true)" ng-if="historyMessage.media.document.withPreview">Open</a>
               </div>
               <div class="im_message_download_progress_wrap" ng-if="historyMessage.media.document.progress.enabled">
                 <div class="progress tg_down_progress">
