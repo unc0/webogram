@@ -1,7 +1,8 @@
-<div class="contacts_modal_wrap">
+<div class="contacts_modal_wrap" my-modal-position>
 
   <div class="modal-header">
     <a class="modal-close-link" ng-click="$dismiss()">关闭</a>
+    <a ng-if="!multiSelect" class="pull-right modal-head-link" ng-click="importContact()">添加联系人</a>
     <h4 class="modal-title">联系人</h4>
   </div>
 

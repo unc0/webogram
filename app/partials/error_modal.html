@@ -1,16 +1,62 @@
-<div class="error_modal_wrap">
+<div class="error_modal_wrap" my-modal-position>
 
   <div class="modal-header">
     <a class="modal-close-link" ng-click="$close()">关闭</a>
-    <h4 class="modal-title">{{title}}</h4>
+    <h4 ng-if="error" class="modal-title" ng-switch="error.type">
+      <span ng-switch-when="ACCOUNT_REQUIRED">查无此账号</span>
+      <span ng-switch-default ng-switch="error.code">
+        <span ng-switch-when="400">错误</span>
+        <span ng-switch-when="401">未认证</span>
+        <span ng-switch-when="403">禁止进入</span>
+        <span ng-switch-when="404">未找到</span>
+        <span ng-switch-when="420">太快</span>
+        <span ng-switch-default>服务器错误</span>
+      </span>
+    </h4>
+    <h4 ng-if="!error" class="modal-title" ng-bind="title || 'Alert'"></h4>
   </div>
-
 
   <div class="modal-body">
 
-    <div class="error_modal_description">
-      {{description}}
+    <div ng-if="error" class="error_modal_description" ng-switch="error.type">
+      <span ng-switch-when="FIRSTNAME_INVALID">
+        名字包含非法字符。
+      </span>
+      <span ng-switch-when="LASTNAME_INVALID">
+        姓氏包含非法字符。
+      </span>
+      <span ng-switch-when="PHONE_NUMBER_INVALID">
+        电话号码包含非法字符。
+      </span>
+      <span ng-switch-when="USERS_TOO_MUCH">
+        你选择了太多用户。
+      </span>
+      <span ng-switch-when="PHOTO_INVALID_DIMENSIONS">
+        图片的尺寸有误，请选择其他图片。
+      </span>
+      <span ng-switch-when="ACCOUNT_REQUIRED">
+        很抱歉，<strong>Telegram</strong> 没有查询到 {{phone | phoneNumber}} 的账户信息。<br/><br/>
+        请使用官方的 <a href="https://telegram.org/" target="_blank">iOS</a> 或 <a href="https://telegram.org/" target="_blank">安卓</a> 客户端进行 <strong>注册</strong> 。
+      </span>
+
+
+      <div ng-switch-default ng-switch="error.code">
+        <span ng-switch-when="400">一个参数未指定或缺失。</span>
+        <span ng-switch-when="401">这个动作需要进行身份认证，请 <a href="#/auth">登入</a>。</span>
+        <span ng-switch-when="403">您无法执行此动作。</span>
+        <span ng-switch-when="404">无法找到此页面。</span>
+        <span ng-switch-when="420">您一下子执行了太多动作，请稍后重试。</span>
+        <span ng-switch-default>服务器内部错误，请稍后重试。</span>
+
+        <div ng-if="error.originalError" ng-switch="showErrorDetails">
+          <pre ng-switch-when="true"><code>{{error.originalError}}</code></pre>
+          点击<a ng-switch-default href="" ng-click="showErrorDetails = true">这里</a>查看技术性的错误细节。
+        </div>
+
+      </div>
     </div>
+
+    <div ng-if="!error" class="error_modal_description" ng-bind="description"></div>
 
   </div>
 

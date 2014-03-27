@@ -273,15 +273,6 @@ angular.module('myApp.services', [])
   function wrapForFull (id) {
     var user = getUser(id);
 
-    user.thumb = {
-      placeholder: 'img/placeholders/UserAvatar'+((Math.abs(id) % 8) + 1)+'@2x.png',
-      location: user && user.photo && user.photo.photo_small,
-      width: 120,
-      height: 120,
-      size: 0
-    };
-    user.peerString = getUserString(id);
-
     return user;
   }
 
@@ -295,9 +286,61 @@ angular.module('myApp.services', [])
       scope: scope,
       windowClass: 'user_modal_window'
     });
+  };
+  $rootScope.openUser = openUser;
+
+  function importContact (phone, firstName, lastName) {
+    return MtpApiManager.invokeApi('contacts.importContacts', {
+      contacts: [{
+        _: 'inputPhoneContact',
+        client_id: '1',
+        phone: phone,
+        first_name: firstName,
+        last_name: lastName
+      }],
+      replace: false
+    }).then(function (importedContactsResult) {
+      saveApiUsers(importedContactsResult.users);
+
+      var foundUserID = false;
+      angular.forEach(importedContactsResult.imported, function (importedContact) {
+        onContactUpdated(foundUserID = importedContact.user_id, true);
+      });
+
+      return foundUserID;
+    });
+  };
+
+  function deleteContacts (userIDs) {
+    var ids = []
+    angular.forEach(userIDs, function (userID) {
+      ids.push({_: 'inputUserContact', user_id: userID})
+    });
+    return MtpApiManager.invokeApi('contacts.deleteContacts', {
+      id: ids
+    }, function () {
+      angular.forEach(userIDs, function (userID) {
+        onContactUpdated(userID, false);
+      });
+    })
   }
 
-  $rootScope.openUser = openUser;
+  function onContactUpdated (userID, isContact) {
+    if (angular.isArray(contactsList)) {
+      var curPos = curIsContact = contactsList.indexOf(userID),
+          curIsContact = curPos != -1;
+
+      if (isContact != curIsContact) {
+        if (isContact) {
+          contactsList.push(userID);
+          SearchIndexManager.indexObject(userID, getUserSearchText(userID), contactsIndex);
+        } else {
+          contactsList.splice(curPos, 1);
+        }
+      }
+    }
+  }
+
 
   $rootScope.$on('apiUpdate', function (e, update) {
     // console.log('on apiUpdate', update);
@@ -326,21 +369,7 @@ angular.module('myApp.services', [])
         break;
 
       case 'updateContactLink':
-        if (angular.isArray(contactsList)) {
-          var userID = update.user_id,
-              curPos = curIsContact = contactsList.indexOf(userID),
-              curIsContact = curPos != -1,
-              newIsContact = update.my_link._ == 'contacts.myLinkContact';
-
-          if (newIsContact != curIsContact) {
-            if (newIsContact) {
-              contactsList.push(userID);
-              SearchIndexManager.indexObject(userID, getUserSearchText(userID), contactsIndex);
-            } else {
-              contactsList.splice(curPos, 1);
-            }
-          }
-        }
+        onContactUpdated(update.user_id, update.my_link._ == 'contacts.myLinkContact');
         break;
     }
   });
@@ -355,6 +384,8 @@ angular.module('myApp.services', [])
     getUserString: getUserString,
     getUserSearchText: getUserSearchText,
     hasUser: hasUser,
+    importContact: importContact,
+    deleteContacts: deleteContacts,
     wrapForFull: wrapForFull,
     openUser: openUser
   }
@@ -640,7 +671,7 @@ angular.module('myApp.services', [])
   }
 })
 
-.service('AppMessagesManager', function ($q, $rootScope, $location, ApiUpdatesManager, AppUsersManager, AppChatsManager, AppPeersManager, AppPhotosManager, AppVideoManager, AppDocsManager, AppAudioManager, MtpApiManager, MtpApiFileManager, RichTextProcessor, NotificationsManager, SearchIndexManager) {
+.service('AppMessagesManager', function ($q, $rootScope, $location, $filter, ApiUpdatesManager, AppUsersManager, AppChatsManager, AppPeersManager, AppPhotosManager, AppVideoManager, AppDocsManager, AppAudioManager, MtpApiManager, MtpApiFileManager, RichTextProcessor, NotificationsManager, SearchIndexManager) {
 
   var messagesStorage = {};
   var messagesForHistory = {};
@@ -1118,7 +1149,7 @@ angular.module('myApp.services', [])
         randomIDS = bigint(randomID[0]).shiftLeft(32).add(bigint(randomID[1])).toString(),
         historyStorage = historiesStorage[peerID],
         inputPeer = AppPeersManager.getInputPeerByID(peerID),
-        attachType, fileName, fileName;
+        attachType, fileName;
 
     if (!options.isMedia) {
       attachType = 'document';
@@ -1256,9 +1287,95 @@ angular.module('myApp.services', [])
     pendingByRandomID[randomIDS] = [peerID, messageID];
   }
 
-  function forwardMessages (msgIDs, inputPeer) {
+  function sendOther(peerID, inputMedia) {
+    var messageID = tempID--,
+        randomID = [nextRandomInt(0xFFFFFFFF), nextRandomInt(0xFFFFFFFF)],
+        randomIDS = bigint(randomID[0]).shiftLeft(32).add(bigint(randomID[1])).toString(),
+        historyStorage = historiesStorage[peerID],
+        inputPeer = AppPeersManager.getInputPeerByID(peerID);
+
+    if (historyStorage === undefined) {
+      historyStorage = historiesStorage[peerID] = {count: null, history: [], pending: []};
+    }
+
+    MtpApiManager.getUserID().then(function (fromID) {
+      var media;
+      switch (inputMedia._) {
+        case 'inputMediaContact':
+          media = angular.extend({}, inputMedia, {_: 'messageMediaContact', user_id: 0});
+          break;
+      }
+
+      var message = {
+        _: 'message',
+        id: messageID,
+        from_id: fromID,
+        to_id: AppPeersManager.getOutputPeer(peerID),
+        out: true,
+        unread: true,
+        date: tsNow() / 1000,
+        message: '',
+        media: media,
+        random_id: randomIDS,
+        pending: true
+      };
+
+      var toggleError = function (on) {
+        var historyMessage = messagesForHistory[messageID];
+        if (on) {
+          message.error = true;
+          if (historyMessage) {
+            historyMessage.error = true;
+          }
+        } else {
+          delete message.error;
+          if (historyMessage) {
+            delete historyMessage.error;
+          }
+        }
+      }
+
+      message.send = function () {
+        MtpApiManager.invokeApi('messages.sendMedia', {
+          peer: inputPeer,
+          media: inputMedia,
+          random_id: randomID
+        }).then(function (result) {
+          if (ApiUpdatesManager.saveSeq(result.seq)) {
+            ApiUpdatesManager.saveUpdate({
+              _: 'updateMessageID',
+              random_id: randomIDS,
+              id: result.message.id
+            });
+
+            message.date = result.message.date;
+            message.id = result.message.id;
+            message.media = result.message.media;
+
+            ApiUpdatesManager.saveUpdate({
+              _: 'updateNewMessage',
+              message: message,
+              pts: result.pts
+            });
+          }
+        }, function (error) {
+          toggleError(true);
+        });
+      };
+
+      saveMessages([message]);
+      historyStorage.pending.unshift(messageID);
+      $rootScope.$broadcast('history_append', {peerID: peerID, messageID: messageID, my: true});
+
+      message.send();
+    });
+
+    pendingByRandomID[randomIDS] = [peerID, messageID];
+  }
+
+  function forwardMessages (peerID, msgIDs) {
     return MtpApiManager.invokeApi('messages.forwardMessages', {
-      peer: inputPeer,
+      peer: AppPeersManager.getInputPeerByID(peerID),
       id: msgIDs
     }).then(function (forwardResult) {
       AppUsersManager.saveApiUsers(forwardResult.users);
@@ -1364,6 +1481,8 @@ angular.module('myApp.services', [])
     if (message.message && message.message.length) {
       message.richMessage = RichTextProcessor.wrapRichText(message.message.substr(0, 64), {noLinks: true, noLinebreaks: true});
     }
+
+    message.dateText = $filter('dateOrTime')(message.date);
 
 
     return messagesForDialogs[msgID] = message;
@@ -1688,6 +1807,7 @@ angular.module('myApp.services', [])
     saveMessages: saveMessages,
     sendText: sendText,
     sendFile: sendFile,
+    sendOther: sendOther,
     forwardMessages: forwardMessages,
     getMessagePeer: getMessagePeer,
     wrapForDialog: wrapForDialog,
@@ -2844,30 +2964,28 @@ angular.module('myApp.services', [])
 
 .service('ErrorService', function ($rootScope, $modal) {
 
-  function showError (templateUrl, params, options) {
+  function show (params, options) {
+    options = options || {};
     var scope = $rootScope.$new();
     angular.extend(scope, params);
 
     return $modal.open({
-      templateUrl: templateUrl,
-      // controller: 'ErrorModalController',
+      templateUrl: 'partials/error_modal.html',
       scope: scope,
-      windowClass: options.windowClass || ''
+      windowClass: options.windowClass || 'error_modal_window'
     });
   }
 
-  function showSimpleError (title, description) {
-    return showError ('partials/error_modal.html', {
+  function alert (title, description) {
+    return show ({
       title: title,
       description: description
-    }, {
-      windowClass: 'error_modal_window'
     });
   };
 
   return {
-    showError: showError,
-    showSimpleError: showSimpleError
+    show: show,
+    alert: alert
   }
 })
 
