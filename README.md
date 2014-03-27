@@ -1,3 +1,12 @@
+## 分支说明/Fork Description
+
+汉化版，附带 node-webkit 支持：
+Translated to Simplefied Chinese, added node-webkit support:
+
+```
+$ nw /path/to/webogram/app
+```
+
 ## [Webogram](http://zhukov.github.io/webogram) – UNOFFICIAL Telegram Web App
 
 Telegram offers great [apps for mobile communication](https://www.telegram.org). It is based on the [MTProto protocol](https://core.telegram.org/mtproto) and has an [Open API](http://core.telegram.org/api). I personally like Telegram for its speed and cloud-support (that makes a web app possible, unlike in the case of WA and others).
@@ -68,9 +77,15 @@ Install [node.js](http://nodejs.org/) and run `node server.js`. Open page http:/
 
 It is possible to run this application in Chrome browser as a packaged app. In order to do this, open this URL in Chrome: `chrome://extensions/`, then tick "Developer mode" and press "Load unpacked extension...". Select the downloaded `app` folder and Webogram application should appear in the list.
 Also it's necessary to replace following line in index.html:
-```<html lang="en" ng-app="myApp"><!-- ng-csp=""-->```
+
+```html
+<html lang="en" ng-app="myApp"><!-- ng-csp=""-->
+```
 with:
-```<html lang="en" ng-app="myApp" ng-csp="">```
+
+```html
+<html lang="en" ng-app="myApp" ng-csp="">
+```
 
 
 You can also download this application from Chrome Web Store: [chrome.google.com/webstore/detail/telegram-unofficial/clhhggbfdinjmjhajaheehoeibfljjno](https://chrome.google.com/webstore/detail/telegram-unofficial/clhhggbfdinjmjhajaheehoeibfljjno). This is more secure way to use app than plain HTTP in web, because sources are downloaded only once and via HTTPS.
@@ -111,7 +126,7 @@ If you know how to code, we welcome you to send fixes and new features, but in o
 * Fork this repo using the button at the top.
 * Clone your forked repo locally.
 
-``$ git clone git@github.com:yourname/webogram.git``
+`$ git clone git@github.com:yourname/webogram.git`
 
 * Don't modify or work on the master branch, we'll use it to always be in sync with webogram upstream.
 
@@ -123,7 +138,7 @@ $ git fetch upstream
 * Always create a new issue when you plan to work on a bug or new feature and wait for other devs input before start coding.
 * Once the new feature is approved or the problem confirmed, go to your local copy and create a new branch to work on it. Use a descriptive name for it, include the issue number for reference.
 
-``$ git checkout -b improve-contacts-99``
+`$ git checkout -b improve-contacts-99`
 
 * Do your coding and push it to your fork. Include as few commits as possible (one should be enough) and a good description. Always include a reference to the issue with "Fix #number".
 
@@ -139,11 +154,11 @@ $ git push origin improve-contacts-99
 
 Some times when you do a PR, you will be asked to correct some code. You can do it on your work branch and commit normally, PR will be automatically updated.
 
-``$ git commit -am "Ops, fixing typo"``
+`$ git commit -am "Ops, fixing typo"`
 
 Once everything is OK, you will be asked to merge all commit messages into one to keep history clean.
 
-``$ git rebase -i master``
+`$ git rebase -i master`
 
 Edit the file and mark as fixup (f) all commits you want to merge with the first one:
 
@@ -154,7 +169,7 @@ f c595f79 Ops, fixing typo
 
 Once rebased you can force a push to your fork branch and the PR will be automatically updated.
 
-``$ git push origin improve-contacts-99 --force``
+`$ git push origin improve-contacts-99 --force`
 
 #### How to keep your local branches updated
 
