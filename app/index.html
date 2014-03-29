@@ -33,6 +33,43 @@
 		window.nwgui = gui;
 		window.nwwin = win;
 	</script>
+  <script type="text/javascript">
+  (function () {
+    if (!window.applicationCache || !window.addEventListener) {
+      return;
+    }
+    var appCache = window.applicationCache,
+        declined = false,
+        updateTimeout = false,
+        scheduleUpdate = function (delay) {
+          clearTimeout(updateTimeout);
+          updateTimeout = setTimeout(function () {
+            try {
+              appCache.update();
+            } catch (ex) {
+              console.log('appCache.update: ' + ex);
+            }
+          }, delay || 300000);
+        },
+        attach = function () {
+          appCache.addEventListener('updateready', function(e) {
+            if (appCache.status == appCache.UPDATEREADY) {
+              if (!declined && confirm('A new version of Webogram is available. Load it?')) {
+                window.location.reload();
+              } else {
+                declined = true;
+                scheduleUpdate();
+              }
+            }
+          }, false);
+          appCache.addEventListener('noupdate', function () {scheduleUpdate()}, false);
+          appCache.addEventListener('error', function () {scheduleUpdate()}, false);
+        };
+
+    scheduleUpdate(3000);
+    window.addEventListener('load', attach);
+  })();
+  </script>
 
 </head>
 <body>
