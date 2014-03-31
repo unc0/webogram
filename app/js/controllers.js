@@ -466,13 +466,14 @@ angular.module('myApp.controllers', [])
 
       for (i = start; i < end; i++) {
         curMessage = $scope.history[i];
-        // if (prevMessage) console.log(dT(), curMessage.from_id == prevMessage.from_id, curMessage.date - prevMessage.date);
         if (prevMessage &&
             curMessage.from_id == prevMessage.from_id &&
             curMessage.date < prevMessage.date + 30 &&
+            !curMessage.fwd_from_id &&
             curMessage.message && curMessage.message.length < 30) {
+
           curMessage.grouped = true;
-        } else if (!start) {
+        } else if (prevMessage || !i) {
           delete curMessage.grouped;
         }
         prevMessage = curMessage;
@@ -947,7 +948,8 @@ angular.module('myApp.controllers', [])
           _: 'inputMediaContact',
           phone_number: $scope.user.phone,
           first_name: $scope.user.first_name,
-          last_name: $scope.user.last_name
+          last_name: $scope.user.last_name,
+          user_id: $scope.user.id
         });
         $rootScope.$broadcast('history_focus', {peerString: peerString});
       })

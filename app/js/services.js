@@ -1302,7 +1302,7 @@ angular.module('myApp.services', [])
       var media;
       switch (inputMedia._) {
         case 'inputMediaContact':
-          media = angular.extend({}, inputMedia, {_: 'messageMediaContact', user_id: 0});
+          media = angular.extend({}, inputMedia, {_: 'messageMediaContact'});
           break;
       }
 
@@ -1519,6 +1519,13 @@ angular.module('myApp.services', [])
         case 'messageMediaAudio':
           message.media.audio = AppAudioManager.wrapForHistory(message.media.audio.id);
           break;
+
+        case 'messageMediaContact':
+          message.media.rFullName = RichTextProcessor.wrapRichText(
+            message.media.first_name + ' ' + (message.media.last_name || ''),
+            {noLinks: true, noLinebreaks: true}
+          );
+          break;
       }
 
       if (message.media.user_id) {
@@ -1527,11 +1534,15 @@ angular.module('myApp.services', [])
       }
     }
     else if (message.action) {
-      if (message.action._ == 'messageActionChatEditPhoto') {
-        message.action.photo = AppPhotosManager.wrapForHistory(message.action.photo.id);
-      }
-      if (message.action._ == 'messageActionChatEditTitle') {
-        message.action.rTitle = RichTextProcessor.wrapRichText(message.action.title, {noLinks: true, noLinebreaks: true}) || 'DELETED';
+      switch (message.action._) {
+        case 'messageActionChatEditPhoto':
+          message.action.photo = AppPhotosManager.wrapForHistory(message.action.photo.id);
+          break;
+
+        case 'messageActionChatCreate':
+        case 'messageActionChatEditTitle':
+          message.action.rTitle = RichTextProcessor.wrapRichText(message.action.title, {noLinks: true, noLinebreaks: true}) || 'DELETED';
+          break;
       }
 
       if (message.action.user_id) {
@@ -1880,6 +1891,31 @@ angular.module('myApp.services', [])
     return photo;
   }
 
+  function preloadPhoto (photoID) {
+    if (!photos[photoID]) {
+      return;
+    }
+    var photo = photos[photoID],
+        fullWidth = $(window).width() - 36,
+        fullHeight = $($window).height() - 150,
+        fullPhotoSize = choosePhotoSize(photo, fullWidth, fullHeight);
+
+    if (fullPhotoSize && !fullPhotoSize.preloaded) {
+      fullPhotoSize.preloaded = true;
+      if (fullPhotoSize.size) {
+        MtpApiFileManager.downloadFile(fullPhotoSize.location.dc_id, {
+          _: 'inputFileLocation',
+          volume_id: fullPhotoSize.location.volume_id,
+          local_id: fullPhotoSize.location.local_id,
+          secret: fullPhotoSize.location.secret
+        }, fullPhotoSize.size);
+      } else {
+        MtpApiFileManager.downloadSmallFile(fullPhotoSize.location);
+      }
+    }
+  };
+  $rootScope.preloadPhoto = preloadPhoto;
+
   function wrapForFull (photoID) {
     var photo = wrapForHistory(photoID),
         fullWidth = $(window).width() - 36,
@@ -1940,6 +1976,7 @@ angular.module('myApp.services', [])
 
   return {
     savePhoto: savePhoto,
+    preloadPhoto: preloadPhoto,
     wrapForHistory: wrapForHistory,
     wrapForFull: wrapForFull,
     openPhoto: openPhoto
@@ -2022,6 +2059,9 @@ angular.module('myApp.services', [])
     // console.log(222, video.w, video.h, full.width, full.height);
 
     video.full = full;
+    video.fullThumb = angular.copy(video.thumb);
+    video.fullThumb.width = full.width;
+    video.fullThumb.height = full.height;
     video.fromUser = AppUsersManager.getUser(video.user_id);
 
     return video;

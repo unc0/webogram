@@ -283,10 +283,10 @@ input[type="number"]::-webkit-inner-spin-button {
   border-radius: 3px;
 }
 .tg_progress .progress-bar {
-  height: 2px;
+  height: 5px;
   line-height: 2px;
   background: rgba(255,255,255, 0.9);
-  border-radius: 2px;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -409,10 +409,16 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 .img_fullsize_progress {
   position: absolute;
-  bottom: 15px;
-  left: 50%;
-  width: 190px;
-  margin-left: -95px;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 25px;
+  margin: 0;
+  padding: 0;
+  background: rgba(0,0,0, 0.5);
+  border: 0;
+  border-radius: 0;
+  padding: 10px;
 }
 
 
@@ -968,6 +974,9 @@ a.im_dialog:hover .im_dialog_date {
 .im_message_grouped .im_content_message_select_area {
   height: 34px;
 }
+.im_history_appending .im_content_message_select_area {
+  height: 52px;
+}
 .im_message_grouped .icon-select-tick {
   margin-top: 4px;
 }
@@ -989,12 +998,12 @@ a.im_message_from_photo,
 a.im_message_contact_photo {
   margin: 1px 12px 0 0;
 }
-.im_message_contact_name {
-  color: #3C6E97;
-  font-weight: bold;
-}
 .non_osx .im_message_contact_name {
   font-size: 12px;
+}
+.im_message_contact_name {
+  font-weight: bold;
+  /*color: #3C6E97;*/
 }
 a.im_message_photo_thumb,
 a.im_message_video_thumb {
@@ -2397,6 +2406,7 @@ a.contacts_modal_contact:hover .contacts_modal_contact_status {
   width: 112px;
   height: 52px;
   margin: -8px 0 0 -112px;
+  -webkit-user-select: text;
 }
 @media (min-width: 1024px) {
   .im_content_message_select_area {

@@ -149,7 +149,7 @@ angular.module('myApp.directives', ['myApp.filters'])
 
   })
 
-  .directive('myHistory', function ($window, $timeout) {
+  .directive('myHistory', function ($window, $timeout, $transition) {
 
     return {
       link: link
@@ -199,9 +199,7 @@ angular.module('myApp.directives', ['myApp.filters'])
         if (!atBottom && !options.my) {
           return;
         }
-        if (animated) {
-          $(scrollableWrap).stop();
-        } else {
+        if (!animated) {
           $(scrollable).css({bottom: 0});
           $(scrollableWrap).addClass('im_history_to_bottom');
         }
@@ -213,22 +211,22 @@ angular.module('myApp.directives', ['myApp.filters'])
             $(historyMessagesEl).removeClass('im_history_appending');
             scrollableWrap.scrollTop = scrollableWrap.scrollHeight;
             $(historyMessagesEl).css(transform, 'translate(0px, ' + (scrollableWrap.scrollHeight - wasH) + 'px)');
-            setTimeout(function () {
-              $(historyMessagesEl).addClass('im_history_appending');
-              $(historyMessagesEl).css(transform, 'translate(0px, 0px)');
-              setTimeout(function () {
-                curAnimation = false;
-                $(historyMessagesEl).removeClass('im_history_appending');
-                updateBottomizer();
-              }, 300);
-            }, 0);
+            $(historyWrap).nanoScroller();
+            var styles = {};
+            styles[transform] = 'translate(0px, 0px)';
+            $(historyMessagesEl).addClass('im_history_appending');
+            $transition($(historyMessagesEl), styles).then(function () {
+              curAnimation = false;
+              $(historyMessagesEl).removeClass('im_history_appending');
+              updateBottomizer();
+            });
           } else {
             $(scrollableWrap).removeClass('im_history_to_bottom');
             $(scrollable).css({bottom: ''});
             scrollableWrap.scrollTop = scrollableWrap.scrollHeight;
             updateBottomizer();
+            $(historyWrap).nanoScroller();
           }
-          $(historyWrap).nanoScroller();
         });
       });
 
@@ -624,18 +622,28 @@ angular.module('myApp.directives', ['myApp.filters'])
       if (cachedSrc) {
         element.attr('src', cachedSrc);
       }
+      if ($scope.thumb && $scope.thumb.width && $scope.thumb.height) {
+        element.attr('width', $scope.thumb.width);
+        element.attr('height', $scope.thumb.height);
+      }
 
-      $scope.$watchCollection('thumb.location', function (newLocation) {
+      var stopWatching = $scope.$watchCollection('thumb.location', function (newLocation) {
+        if ($scope.thumb && $scope.thumb.width && $scope.thumb.height) {
+          element.attr('width', $scope.thumb.width);
+          element.attr('height', $scope.thumb.height);
+        }
         // console.log('new loc', newLocation, arguments);
         var counterSaved = ++counter;
         if (!newLocation || newLocation.empty) {
           element.attr('src', $scope.thumb && $scope.thumb.placeholder || 'img/blank.gif');
+          cleanup();
           return;
         }
 
         var cachedSrc = MtpApiFileManager.getCachedFile(newLocation);
         if (cachedSrc) {
           element.attr('src', cachedSrc);
+          cleanup();
           return;
         }
 
@@ -646,15 +654,24 @@ angular.module('myApp.directives', ['myApp.filters'])
         MtpApiFileManager.downloadSmallFile($scope.thumb.location, $scope.thumb.size).then(function (url) {
           if (counterSaved == counter) {
             element.attr('src', url);
+            cleanup();
           }
         }, function (e) {
           console.log('Download image failed', e, $scope.thumb.location);
           if (counterSaved == counter) {
             element.attr('src', $scope.thumb.placeholder || 'img/blank.gif');
+            cleanup();
           }
         });
       })
 
+      var cleanup = angular.noop;
+      // function () {
+      //   setTimeout(function () {
+      //     $scope.$destroy()
+      //     stopWatching();
+      //   }, 0);
+      // };
     }
 
   })
@@ -763,9 +780,7 @@ angular.module('myApp.directives', ['myApp.filters'])
             <img\
               class="img_fullsize"\
               my-load-thumb\
-              thumb="video.thumb"\
-              width="{{video.full.width}}"\
-              height="{{video.full.height}}"\
+              thumb="video.fullThumb"\
             />\
           </div>\
           <div class="video_full_player" ng-if="player.src">\
