@@ -1,17 +1,19 @@
 <div ng-include="'partials/head.html'"></div>
 
 
-<div ng-show="showWelcome">
+<div ng-if="showWelcome">
 
-  <div class="welcome_logo"></div>
+  <div my-vertical-position="0.4">
+    <div class="welcome_logo"></div>
 
-  <div class="welcome_box_wrap">
-    <div class="welcome_text">
-      <p>欢迎使用 Webogram，一个非官方的 <strong>Telegram</strong> 移动通信平台。</p>
-      <p>本程序仍处于 alpha 测试阶段，我们无法保证 200% 的安全性及可用性。</p>
-      <p>请访问 <a target="_blank" href="https://telegram.org/">telegram.org</a> 官网了解更多相关信息。</p>
+    <div class="welcome_box_wrap">
+      <div class="welcome_text">
+        <p>欢迎使用 Webogram，一个非官方的 <strong>Telegram</strong> 移动通信平台。</p>
+        <p>本程序仍处于 alpha 测试阶段，我们无法保证 200% 的安全性及可用性。</p>
+        <p>请访问 <a target="_blank" href="https://telegram.org/">telegram.org</a> 官网了解更多相关信息。</p>
+      </div>
+      <a href="#/login" class="btn btn-success btn-block">开始拍电报吧</a>
     </div>
-    <a href="#/login" class="btn btn-success btn-block">开始拍电报吧</a>
   </div>
 
 </div>
