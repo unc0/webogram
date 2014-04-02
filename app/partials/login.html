@@ -12,7 +12,7 @@
       <input type="tel" class="form-control" my-focused name="phone_number" ng-model="credentials.phone_number" placeholder="请输入您的电话号码" required>
     </div>
     <button class="btn btn-success btn-block" ng-class="{disabled: progress.enabled}" ng-disabled="progress.enabled" type="submit">
-			{{progress.enabled ? '正在生成密钥……' : '下一步'}}
+			{{progress.enabled ? '正在生成密钥…' : '下一步'}}
     </button>
   </form>
 
@@ -32,7 +32,7 @@
     </div>
 
     <button class="btn btn-success btn-block" type="submit" ng-class="{disabled: progress.enabled}" ng-disabled="progress.enabled">
-			{{progress.enabled ? '正在检查验证码……' : '登入'}}
+			{{progress.enabled ? '正在检查验证码…' : '登入'}}
     </button>
   </form>
 </div>

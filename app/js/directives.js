@@ -791,7 +791,7 @@ angular.module('myApp.directives', ['myApp.filters'])
           </div>\
           <div class="video_full_error_wrap" ng-if="error">\
             <div class="video_full_error" ng-if="error.html" ng-bind-html="error.html"></div>\
-            <div class="video_full_error" ng-if="error.text">{{error.text}}</div>\
+            <div class="video_full_error" ng-if="error.text" ng-bind="error.text"></div>\
           </div>\
         </div>',
       scope: {
@@ -819,7 +819,7 @@ angular.module('myApp.directives', ['myApp.filters'])
         }
       }
 
-      MtpApiFileManager.downloadFile($scope.video.dc_id, inputLocation, $scope.video.size, null, {mime: 'video/mp4'}).then(function (url) {
+      var promise = MtpApiFileManager.downloadFile($scope.video.dc_id, inputLocation, $scope.video.size, null, {mime: 'video/mp4'}).then(function (url) {
         $scope.progress.enabled = false;
         // $scope.progress = {enabled: true, percent: 50};
         $scope.player.hasQuicktime = hasQt;
@@ -838,6 +838,10 @@ angular.module('myApp.directives', ['myApp.filters'])
 
       }, function (progress) {
         $scope.progress.percent = Math.max(1, Math.floor(100 * progress.done / progress.total));
+      });
+
+      $scope.$on('$destroy', function () {
+        promise.cancel();
       });
     }
 
@@ -875,30 +879,29 @@ angular.module('myApp.directives', ['myApp.filters'])
       link: link,
     };
 
-    var interval;
-
     function link ($scope, element, attrs) {
-      var promise = $interval(function () {
-        var time = tsNow(),
-            cnt = 3;
+      element.html(isAnimationSupported(element[0])
+        ? '<div class="loading_dots"><span></span><span></span><span></span></div>'
+        : '...'
+      );
+    }
 
-        if (time % 1000 <= 200) {
-          cnt = 0;
-        } else if (time % 1000 <= 400) {
-          cnt = 1;
-        } else if (time % 1000 <= 600) {
-          cnt = 2;
+    var animationSupported;
+    function isAnimationSupported (el) {
+      if (animationSupported === undefined) {
+        animationSupported = el.style.animationName !== undefined;
+        if (animationSupported === false) {
+          var domPrefixes = 'Webkit Moz O ms Khtml'.split(' '), i;
+          for (i = 0; i < domPrefixes.length; i++) {
+            if (el.style[domPrefixes[i] + 'AnimationName'] !== undefined) {
+              animationSupported = true;
+              break;
+            }
+          }
         }
+      }
 
-        var text = '...',
-            html = text.substr(0, cnt + 1) + (cnt < 2 ? ('<span class="text-invisible">' + text.substr(cnt + 1) + '</span>') : '');
-
-        element.html(html);
-      }, 200);
-
-      $scope.$on('$destroy', function cleanup() {
-        $interval.cancel(promise);
-      });
+      return animationSupported;
     }
   })
 

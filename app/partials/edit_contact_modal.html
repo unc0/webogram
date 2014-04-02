@@ -1,8 +1,8 @@
 <div class="import_modal_wrap" my-modal-position>
 
   <div class="modal-header">
-    <a class="modal-close-link" ng-click="$close()">Close</a>
-    <h4 class="modal-title">Edit contact</h4>
+    <a class="modal-close-link" ng-click="$close()">关闭</a>
+    <h4 class="modal-title">编辑联系人</h4>
   </div>
 
   <div class="modal-body">
@@ -22,10 +22,10 @@
       <div class="import_modal_panel clearfix">
 
         <div class="import_modal_actions pull-right">
-          <a class="btn btn-default" ng-click="$dismiss()"> Cancel </a>
+          <a class="btn btn-default" ng-click="$dismiss()"> 取消 </a>
 
           <button class="btn btn-success" type="submit" ng-class="{disabled: progress.enabled}" ng-disabled="progress.enabled">
-            {{progress.enabled ? 'Saving...' : 'Save'}}
+            {{progress.enabled ? '正在保存…' : '保存'}}
           </button>
 
 

@@ -34,6 +34,9 @@
       <span ng-switch-when="PHOTO_INVALID_DIMENSIONS">
         图片的尺寸有误，请选择其他图片。
       </span>
+      <span ng-switch-when="PHOTO_CROP_SIZE_SMALL">
+        The photo you provided is too small.
+      </span>
       <span ng-switch-when="ACCOUNT_REQUIRED">
         很抱歉，<strong>Telegram</strong> 没有查询到 {{phone | phoneNumber}} 的账户信息。<br/><br/>
         请使用官方的 <a href="https://telegram.org/" target="_blank">iOS</a> 或 <a href="https://telegram.org/" target="_blank">安卓</a> 客户端进行 <strong>注册</strong> 。
@@ -47,12 +50,16 @@
         <span ng-switch-when="404">无法找到此页面。</span>
         <span ng-switch-when="420">您一下子执行了太多动作，请稍后重试。</span>
         <span ng-switch-default>服务器内部错误，请稍后重试。</span>
+      </div>
 
-        <div ng-if="error.originalError" ng-switch="showErrorDetails">
-          <pre ng-switch-when="true"><code>{{error.originalError}}</code></pre>
-          点击<a ng-switch-default href="" ng-click="showErrorDetails = true">这里</a>查看技术性的错误细节。
-        </div>
+    </div>
 
+    <div ng-if="error" class="error_modal_details" ng-switch="error.detailsShown">
+      <textarea ng-switch-when="true" rows="3" onclick="this.select()">Method: {{error.input || 'N/A'}}
+Result: {{error.originalError || error}}
+Stack: {{error.stack}}</textarea>
+      <div ng-switch-default>
+        <a href="" ng-click="error.detailsShown = true">技术信息</a>
       </div>
     </div>
 

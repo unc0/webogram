@@ -318,7 +318,7 @@ angular.module('myApp.services', [])
     });
     return MtpApiManager.invokeApi('contacts.deleteContacts', {
       id: ids
-    }, function () {
+    }).then(function () {
       angular.forEach(userIDs, function (userID) {
         onContactUpdated(userID, false);
       });
@@ -779,6 +779,7 @@ angular.module('myApp.services', [])
   }
 
   function fillHistoryStorage (inputPeer, maxID, fullLimit, historyStorage) {
+    console.log('fill history storage', inputPeer, maxID, fullLimit, angular.copy(historyStorage));
     return MtpApiManager.invokeApi('messages.getHistory', {
       peer: inputPeer,
       offset: 0,
@@ -925,8 +926,6 @@ angular.module('myApp.services', [])
 
       return deletedMessageIDs;
     });
-
-
   }
 
   function processAffectedHistory (inputPeer, affectedHistory, method) {
@@ -1215,7 +1214,9 @@ angular.module('myApp.services', [])
       }
 
       message.send = function () {
-        MtpApiFileManager.uploadFile(file).then(function (inputFile) {
+        var uploaded = false;
+        var promise = MtpApiFileManager.uploadFile(file).then(function (inputFile) {
+          uploaded = true;
           var inputMedia;
           switch (attachType) {
             case 'photo':
@@ -1275,6 +1276,13 @@ angular.module('myApp.services', [])
             $rootScope.$broadcast('history_update', {peerID: peerID});
           }
         });
+
+        media.progress.cancel = function () {
+          if (!uploaded) {
+            promise.cancel();
+            cancelPendingMessage(randomID);
+          }
+        }
       };
 
       saveMessages([message]);
@@ -1396,6 +1404,36 @@ angular.module('myApp.services', [])
     });
   };
 
+  function cancelPendingMessage (randomID) {
+    var pendingData = pendingByRandomID[randomID];
+
+    if (pendingData) {
+      var peerID = pendingData[0],
+          tempID = pendingData[1],
+          historyStorage = historiesStorage[peerID],
+          i;
+
+      for (i = 0; i < historyStorage.pending.length; i++) {
+        if (historyStorage.pending[i] == tempID) {
+          historyStorage.pending.splice(i, 1);
+          break;
+        }
+      }
+
+      delete messagesForHistory[tempID];
+      delete messagesStorage[tempID];
+
+      ApiUpdatesManager.saveUpdate({
+        _: 'updateDeleteMessages',
+        messages: [tempID]
+      });
+
+      return true;
+    }
+
+    return false;
+  }
+
   function finalizePendingMessage(randomID, finalMessage) {
     var pendingData = pendingByRandomID[randomID];
     // console.log('pdata', randomID, pendingData);
@@ -1494,6 +1532,10 @@ angular.module('myApp.services', [])
     }
 
     var message = angular.copy(messagesStorage[msgID]) || {id: msgID};
+
+    if (message.progress) {
+      message.progress = messagesStorage[msgID].progress;
+    }
 
     message.fromUser = AppUsersManager.getUser(message.from_id);
     message.fromPhoto = AppUsersManager.getUserPhoto(message.from_id, 'User');
@@ -2797,7 +2839,7 @@ angular.module('myApp.services', [])
     lastOnlineUpdated = offline ? 0 : date;
     return MtpApiManager.invokeApi('account.updateStatus', {
       offline: offline
-    });
+    }, {noErrorBox: true});
   }
 
   function checkIDLE() {
@@ -3005,16 +3047,30 @@ angular.module('myApp.services', [])
 
 .service('ErrorService', function ($rootScope, $modal) {
 
+  var shownBoxes = 0;
+
   function show (params, options) {
+    if (shownBoxes >= 2) {
+      console.log('Skip error box, too many open', shownBoxes, params, options);
+      return false;
+    }
+
     options = options || {};
     var scope = $rootScope.$new();
     angular.extend(scope, params);
 
-    return $modal.open({
+    shownBoxes++;
+    var modal = $modal.open({
       templateUrl: 'partials/error_modal.html',
       scope: scope,
       windowClass: options.windowClass || 'error_modal_window'
     });
+
+    modal.result['finally'](function () {
+      shownBoxes--;
+    });
+
+    return modal;
   }
 
   function alert (title, description) {

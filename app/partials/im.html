@@ -95,7 +95,7 @@
                   <h4 ng-switch-when="video">视频</h4>
                   <h4 ng-switch-when="documents">文档</h4>
 
-                  <h4 ng-switch-default ng-switch="historyPeer.id > 0">
+                  <h4 ng-switch-default ng-switch="historyPeer.id > 0" ng-click="showPeerInfo()">
                     <div ng-switch-when="true">
                       <span ng-bind-html="historyPeer.data.rFullName"></span>
                       <small class="im_peer_online">{{historyPeer.data | userStatus}}</small>
@@ -125,7 +125,7 @@
 
                   <div class="im_history" ng-class="{im_history_selectable: selectActions}">
                     <div class="im_history_empty" ng-show="!history.length" my-vertical-position="0.3">
-                      No messages here yet...
+                      正在获取相关历史记录…
                     </div>
                     <div class="im_history_messages">
                       <div class="im_history_message_wrap" my-message bindonce ng-repeat="historyMessage in history"></div>

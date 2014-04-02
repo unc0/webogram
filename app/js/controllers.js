@@ -98,6 +98,7 @@ angular.module('myApp.controllers', [])
           switch (error.type) {
             case 'PHONE_NUMBER_INVALID':
               $scope.error = {field: 'phone'};
+              error.handled = true;
               break;
           }
         });
@@ -106,10 +107,8 @@ angular.module('myApp.controllers', [])
         switch (error.type) {
           case 'PHONE_NUMBER_INVALID':
             $scope.error = {field: 'phone'};
+            error.handled = true;
             break;
-
-          default:
-            ErrorService.alert('Unknown error occured', 'Please check your internet connection or install the latest version of Google Chrome browser.');
         }
       });
     }
@@ -132,8 +131,10 @@ angular.module('myApp.controllers', [])
       MtpApiManager.invokeApi(method, params, options).then(saveAuth, function (error) {
         $scope.progress.enabled = false;
         if (error.code == 400 && error.type == 'PHONE_NUMBER_UNOCCUPIED') {
+          error.handled = true;
           return $scope.logIn(true);
         } else if (error.code == 400 && error.type == 'PHONE_NUMBER_OCCUPIED') {
+          error.handled = true;
           return $scope.logIn(false);
         }
 
@@ -141,12 +142,15 @@ angular.module('myApp.controllers', [])
         switch (error.type) {
           case 'FIRSTNAME_INVALID':
             $scope.error = {field: 'first_name'};
+            error.handled = true;
             break;
           case 'LASTNAME_INVALID':
             $scope.error = {field: 'last_name'};
+            error.handled = true;
             break;
           case 'PHONE_CODE_INVALID':
             $scope.error = {field: 'phone_code'};
+            error.handled = true;
             break;
         }
       });
@@ -325,6 +329,7 @@ angular.module('myApp.controllers', [])
           MtpApiManager.logOut()['finally'](function () {
             $location.url('/login');
           });
+          error.handled = true;
         }
       });
     }
@@ -1095,12 +1100,6 @@ angular.module('myApp.controllers', [])
           }
         }).then(function (updateResult) {
           onStatedMessage(updateResult);
-        }, function (error) {
-          switch (error.code) {
-            case 400:
-              ErrorService.alert('Bad photo', 'The photo is invalid, please select another file.');
-              break;
-          }
         });
       })['finally'](function () {
         $scope.photo.updating = false;
@@ -1133,7 +1132,7 @@ angular.module('myApp.controllers', [])
 
   })
 
-  .controller('SettingsModalController', function ($rootScope, $scope, $timeout, AppUsersManager, AppChatsManager, MtpApiManager, AppConfigManager, NotificationsManager, MtpApiFileManager, ApiUpdatesManager, ErrorService) {
+  .controller('SettingsModalController', function ($rootScope, $scope, $timeout, AppUsersManager, AppChatsManager, MtpApiManager, AppConfigManager, NotificationsManager, MtpApiFileManager, ApiUpdatesManager) {
 
     $scope.profile = {};
 
@@ -1259,13 +1258,16 @@ angular.module('myApp.controllers', [])
         switch (error.type) {
           case 'FIRSTNAME_INVALID':
             $scope.error = {field: 'first_name'};
+            error.handled = true;
             break;
 
           case 'LASTNAME_INVALID':
             $scope.error = {field: 'last_name'};
+            error.handled = true;
             break;
 
           case 'NAME_NOT_MODIFIED':
+            error.handled = true;
             $scope.error = {};
             break;
         }
