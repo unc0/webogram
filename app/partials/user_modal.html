@@ -19,25 +19,25 @@
         <p class="user_modal_status" ng-if="user.status" ng-bind="user | userStatus"></p>
 
         <div class="user_modal_actions_wrap clearfix">
-          <button class="btn btn-primary user_modal_main_btn" ng-click="goToHistory()">Send message</button>
+          <button class="btn btn-primary user_modal_main_btn" ng-click="goToHistory()">发送消息</button>
 
           <div class="dropdown user_modal_other_btn">
-            <button class="btn btn-link dropdown-toggle">More<i class="icon icon-caret"></i></button>
+            <button class="btn btn-link dropdown-toggle">更多<i class="icon icon-caret"></i></button>
             <ul class="dropdown-menu">
               <li ng-if="user._ == 'userContact'">
-                <a ng-click="importContact(true)">Edit contact</a>
+                <a ng-click="importContact(true)">编辑联系人</a>
               </li>
               <li ng-if="user._ == 'userContact'">
-                <a ng-click="deleteContact()">Delete contact</a>
+                <a ng-click="deleteContact()">删除联系人</a>
               </li>
               <li ng-if="user.phone.length > 0 &amp;&amp; user._ != 'userContact'">
-                <a ng-click="importContact()">Add to contacts</a>
+                <a ng-click="importContact()">添加到联系人列表</a>
               </li>
               <li ng-if="user.phone.length > 0">
-                <a ng-click="shareContact()">Share contact</a>
+                <a ng-click="shareContact()">分享联系人</a>
               </li>
               <li>
-                <a ng-click="flushHistory()">Delete chat</a>
+                <a ng-click="flushHistory()">删除聊天记录</a>
               </li>
             </ul>
           </div>
@@ -48,7 +48,7 @@
     </div>
 
     <div class="modal_section" ng-if="user.phone">
-      <h3 class="modal_section_header">Phone</h3>
+      <h3 class="modal_section_header">电话</h3>
       <div class="modal_section_body">
         <p><span ng-bind="user.phone | phoneNumber"></span></p>
       </div>
