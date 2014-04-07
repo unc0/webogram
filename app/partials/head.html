@@ -22,10 +22,9 @@
         </ul>
 
         <ul ng-if="!offline" class="nav navbar-nav navbar-right">
-          <li ng-if="isLoggedIn"><a href="" ng-click="openGroup()">新建群</a></li>
           <li ng-if="isLoggedIn"><a href="" ng-click="openContacts()">联系人</a></li>
           <li ng-if="isLoggedIn"><a href="" ng-click="openSettings()">设置</a></li>
-					<li><a href="" ng-click="openAbout()">关于</a></li>
+          <li ng-if="isLoggedIn"><a href="" ng-click="logOut()">登出</a></li>
 					<li><a href="" ng-click="hideWindow()">_</a></li>
 					<li><a href="" ng-click="closeWindow()">x</a></li>
         </ul>

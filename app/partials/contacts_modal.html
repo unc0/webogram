@@ -1,11 +1,5 @@
 <div class="contacts_modal_wrap" my-modal-position>
 
-  <div class="modal-header">
-    <a class="modal-close-link" ng-click="$dismiss()">关闭</a>
-    <a ng-if="!multiSelect" class="pull-right modal-head-link" ng-click="importContact()">添加联系人</a>
-    <h4 class="modal-title">联系人</h4>
-  </div>
-
   <div class="modal-body">
 
     <div class="contacts_modal_search">
@@ -48,15 +42,16 @@
 
     </div>
 
+  </div>
 
-    <div ng-if="multiSelect" class="contacts_modal_panel">
-
-      <button class="btn btn-success btn-block" ng-class="{disabled: !selectedCount}" ng-disabled="!selectedCount" ng-click="submitSelected()" type="submit">
-        下一个 »
-      </button>
-
+  <div class="modal-footer" ng-switch="multiSelect">
+    <button ng-switch-when="true" class="btn btn-success btn-block" ng-class="{disabled: !selectedCount}" ng-disabled="!selectedCount" ng-click="submitSelected()" type="submit">
+      下一个 »
+    </button>
+    <div ng-switch-default>
+      <a class="btn btn-link pull-left" ng-click="importContact()">添加联系人</a>
+      <button type="button" class="btn btn-primary" ng-click="$dismiss()">完成</button>
     </div>
-
   </div>
 
 </div>

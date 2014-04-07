@@ -1,0 +1,27 @@
+<div class="profile_edit_modal_wrap" my-modal-position>
+
+  <a class="modal-close-button" ng-click="$dismiss()"><i></i></a>
+
+  <div class="modal-body">
+
+    <form class="modal_simple_form" ng-submit="updateProfile()">
+
+      <h4>编辑个人信息</h4>
+
+      <div class="form-group import_modal_field_wrap" ng-class="{'has-error': error.field == 'last_name'}">
+        <input class="form-control input-sm" my-focused type="text" placeholder="姓氏" ng-model="profile.last_name"/>
+      </div>
+      <div class="form-group import_modal_field_wrap" ng-class="{'has-error': error.field == 'first_name'}">
+        <input class="form-control input-sm" type="text" placeholder="名字" ng-model="profile.first_name"  name="first_name"/>
+      </div>
+
+    </form>
+
+  </div>
+
+  <div class="modal-footer">
+    <a class="btn btn-link" ng-click="$dismiss()">取消</a>
+    <button class="btn btn-primary" ng-class="{disabled: profile.updating}" ng-click="updateProfile()" ng-bind="profile.updating ? '正在保存…' : '保存'" ng-disabled="profile.updating"></button>
+  </div>
+
+</div>

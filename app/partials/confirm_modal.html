@@ -1,0 +1,28 @@
+<div class="confirm_modal_wrap" my-modal-position>
+
+  <a class="modal-close-button" ng-click="$dismiss()"><i></i></a>
+
+  <div class="modal-body">
+
+    <div class="confirm_modal_description" ng-switch="type">
+      <span ng-switch-when="LOGOUT">您确定要登出吗？</span>
+      <span ng-switch-when="WEBOGRAM_UPDATED_RELOAD">有新版本的 Webogram 可用，是否更新？</span>
+      <span ng-switch-when="HISTORY_FLUSH">您确定要这样做吗？此操作将无法撤销。</span>
+      <span ng-switch-when="TERMINATE_SESSIONS">您确定要只保留此会话并将其他设备上的会话都登出吗？</span>
+      <span ng-switch-default ng-bind="message || '您确定？'"></span>
+    </div>
+
+  </div>
+
+  <div class="modal-footer">
+    <a class="btn btn-link" ng-click="$dismiss()" ng-switch="type">
+      <span ng-switch-default>取消</span>
+    </a>
+    <button type="button" class="btn btn-primary" ng-switch="type" ng-click="$close()">
+      <span ng-switch-when="LOGOUT">登出</span>
+      <span ng-switch-when="HISTORY_FLUSH">删除聊天记录</span>
+      <span ng-switch-default>确定</span>
+    </button>
+  </div>
+
+</div>

@@ -11,7 +11,7 @@
 
 angular.module('myApp.controllers', [])
 
-  .controller('AppWelcomeController', function($scope, $location, MtpApiManager) {
+  .controller('AppWelcomeController', function($scope, $location, MtpApiManager, ErrorService) {
     MtpApiManager.getUserID().then(function (id) {
       if (id) {
         $location.url('/im');
@@ -158,7 +158,7 @@ angular.module('myApp.controllers', [])
     };
   })
 
-  .controller('AppIMController', function ($scope, $location, $routeParams, $modal, $rootScope, $modalStack, MtpApiManager, AppUsersManager, ContactsSelectService) {
+  .controller('AppIMController', function ($scope, $location, $routeParams, $modal, $rootScope, $modalStack, MtpApiManager, AppUsersManager, ContactsSelectService, ErrorService) {
 
     $scope.$on('$routeUpdate', updateCurDialog);
 
@@ -177,7 +177,6 @@ angular.module('myApp.controllers', [])
       $modal.open({
         templateUrl: 'partials/settings_modal.html',
         controller: 'SettingsModalController',
-        scope: $rootScope.$new(),
         windowClass: 'settings_modal_window'
       });
     }
@@ -223,6 +222,15 @@ angular.module('myApp.controllers', [])
     $scope.dialogSelect = function (peerString) {
       $rootScope.$broadcast('history_focus', {peerString: peerString});
     };
+
+    $scope.logOut = function () {
+      ErrorService.confirm({type: 'LOGOUT'}).then(function () {
+        MtpApiManager.logOut().then(function () {
+          location.hash = '/login';
+          location.reload();
+        });
+      })
+    }
 
     updateCurDialog();
 
@@ -375,7 +383,7 @@ angular.module('myApp.controllers', [])
 
   })
 
-  .controller('AppImHistoryController', function ($scope, $location, $timeout, $rootScope, MtpApiManager, AppUsersManager, AppChatsManager, AppMessagesManager, AppPeersManager, ApiUpdatesManager, PeersSelectService, IdleManager, StatusManager) {
+  .controller('AppImHistoryController', function ($scope, $location, $timeout, $rootScope, MtpApiManager, AppUsersManager, AppChatsManager, AppMessagesManager, AppPeersManager, ApiUpdatesManager, PeersSelectService, IdleManager, StatusManager, ErrorService) {
 
     $scope.$watch('curDialog.peer', applyDialogSelect);
 
@@ -474,8 +482,9 @@ angular.module('myApp.controllers', [])
         if (prevMessage &&
             curMessage.from_id == prevMessage.from_id &&
             curMessage.date < prevMessage.date + 30 &&
+            !prevMessage.fwd_from_id &&
             !curMessage.fwd_from_id &&
-            curMessage.message && curMessage.message.length < 30) {
+            curMessage.message && curMessage.message.length < 60) {
 
           curMessage.grouped = true;
         } else if (prevMessage || !i) {
@@ -601,12 +610,11 @@ angular.module('myApp.controllers', [])
     }
 
     function selectedFlush () {
-      if (safeConfirm('Are you sure? This can not be undone!') !== true) {
-        return false;
-      }
-      AppMessagesManager.flushHistory($scope.curDialog.inputPeer).then(function () {
-        selectedCancel();
-      });
+      ErrorService.confirm({type: 'HISTORY_FLUSH'}).then(function () {
+        AppMessagesManager.flushHistory($scope.curDialog.inputPeer).then(function () {
+          selectedCancel();
+        });
+      })
     };
 
     function selectedDelete () {
@@ -876,7 +884,7 @@ angular.module('myApp.controllers', [])
     $scope.video = AppVideoManager.wrapForFull($scope.videoID);
   })
 
-  .controller('UserModalController', function ($scope, $location, $rootScope, $modal, AppUsersManager, NotificationsManager, AppMessagesManager, AppPeersManager, PeersSelectService) {
+  .controller('UserModalController', function ($scope, $location, $rootScope, $modal, AppUsersManager, NotificationsManager, AppMessagesManager, AppPeersManager, PeersSelectService, ErrorService) {
 
     var peerString = AppUsersManager.getUserString($scope.userID);
 
@@ -909,11 +917,10 @@ angular.module('myApp.controllers', [])
     };
 
     $scope.flushHistory = function () {
-      if (safeConfirm('Are you sure? This can not be undone!') !== true) {
-        return false;
-      }
-      AppMessagesManager.flushHistory(AppPeersManager.getInputPeerByID($scope.userID)).then(function () {
-        $scope.goToHistory();
+      ErrorService.confirm({type: 'HISTORY_FLUSH'}).then(function () {
+        AppMessagesManager.flushHistory(AppPeersManager.getInputPeerByID($scope.userID)).then(function () {
+          $scope.goToHistory();
+        });
       });
     };
 
@@ -1071,13 +1078,11 @@ angular.module('myApp.controllers', [])
 
 
     $scope.flushHistory = function () {
-      if (safeConfirm('Are you sure? This can not be undone!') !== true) {
-        return;
-      }
-      AppMessagesManager.flushHistory(AppPeersManager.getInputPeerByID(-$scope.chatID)).then(function () {
-        $rootScope.$broadcast('history_focus', {peerString: $scope.chatFull.peerString});
+      ErrorService.confirm({type: 'HISTORY_FLUSH'}).then(function () {
+        AppMessagesManager.flushHistory(AppPeersManager.getInputPeerByID(-$scope.chatID)).then(function () {
+          $rootScope.$broadcast('history_focus', {peerString: $scope.chatFull.peerString});
+        });
       });
-
     };
 
 
@@ -1132,23 +1137,18 @@ angular.module('myApp.controllers', [])
 
   })
 
-  .controller('SettingsModalController', function ($rootScope, $scope, $timeout, AppUsersManager, AppChatsManager, MtpApiManager, AppConfigManager, NotificationsManager, MtpApiFileManager, ApiUpdatesManager) {
+  .controller('SettingsModalController', function ($rootScope, $scope, $timeout, $modal, AppUsersManager, AppChatsManager, MtpApiManager, AppConfigManager, NotificationsManager, MtpApiFileManager, ApiUpdatesManager, ErrorService) {
 
     $scope.profile = {};
+    $scope.photo = {};
 
     MtpApiManager.getUserID().then(function (id) {
-      var user = AppUsersManager.getUser(id);
-      $scope.profile.first_name = user.first_name;
-      $scope.profile.last_name = user.last_name;
-      $scope.profile.photo = AppUsersManager.getUserPhoto(id, 'User');
-
-      $scope.phone = user.phone;
+      $scope.profile = AppUsersManager.getUser(id);
+      $scope.photo = AppUsersManager.getUserPhoto(id, 'User');
     });
 
     $scope.notify = {};
     $scope.send = {};
-
-    $scope.photo = {};
 
     $scope.$watch('photo.file', onPhotoSelected);
 
@@ -1173,11 +1173,11 @@ angular.module('myApp.controllers', [])
               photo: AppUsersManager.getUser(id).photo,
               previous: true
             });
-            $scope.profile.photo = AppUsersManager.getUserPhoto(id, 'User');
+            $scope.photo = AppUsersManager.getUserPhoto(id, 'User');
           });
         });
       })['finally'](function () {
-        $scope.photo.updating = false;
+        delete $scope.updating;
       });
     };
 
@@ -1195,10 +1195,24 @@ angular.module('myApp.controllers', [])
             photo: updateResult,
             previous: true
           });
-          $scope.profile.photo = AppUsersManager.getUserPhoto(id, 'User');
+          $scope.photo = AppUsersManager.getUserPhoto(id, 'User');
         });
       })['finally'](function () {
-        $scope.photo.updating = false;
+        delete $scope.photo.updating;
+      });
+    };
+
+    $scope.editProfile = function () {
+      $modal.open({
+        templateUrl: 'partials/profile_edit_modal.html',
+        controller: 'ProfileEditModalController',
+        windowClass: 'profile_edit_modal_window'
+      });
+    };
+
+    $scope.terminateSessions = function () {
+      ErrorService.confirm({type: 'TERMINATE_SESSIONS'}).then(function () {
+        MtpApiManager.invokeApi('auth.resetAuthorizations', {});
       });
     };
 
@@ -1242,18 +1256,27 @@ angular.module('myApp.controllers', [])
         $rootScope.$broadcast('settings_changed');
       });
     });
+  })
 
+  .controller('ProfileEditModalController', function ($rootScope, $scope, $timeout, $modal, $modalInstance, AppUsersManager, AppChatsManager, MtpApiManager, AppConfigManager, NotificationsManager, MtpApiFileManager, ApiUpdatesManager) {
 
+    $scope.profile = {};
     $scope.error = {};
-    $scope.save = function (profileForm) {
+
+    MtpApiManager.getUserID().then(function (id) {
+      $scope.profile = AppUsersManager.getUser(id);
+    });
+
+    $scope.updateProfile = function () {
+      $scope.profile.updating = true;
+
       MtpApiManager.invokeApi('account.updateProfile', {
         first_name: $scope.profile.first_name || '',
         last_name: $scope.profile.last_name || ''
       }).then(function (user) {
         $scope.error = {};
-        // console.log($scope.profileForm);
-        profileForm.$setPristine();
         AppUsersManager.saveApiUser(user);
+        $modalInstance.close();
       }, function (error) {
         switch (error.type) {
           case 'FIRSTNAME_INVALID':
@@ -1268,16 +1291,11 @@ angular.module('myApp.controllers', [])
 
           case 'NAME_NOT_MODIFIED':
             error.handled = true;
-            $scope.error = {};
+            $modalInstance.close();
             break;
         }
-      });
-    }
-
-    $scope.logOut = function () {
-      MtpApiManager.logOut().then(function () {
-        location.hash = '/login';
-        location.reload();
+      })['finally'](function () {
+        delete $scope.profile.updating;
       });
     }
   })
@@ -1377,6 +1395,7 @@ angular.module('myApp.controllers', [])
       if (!$scope.group.name) {
         return;
       }
+      $scope.group.creating = true;
       var inputUsers = [];
       angular.forEach($scope.userIDs, function(userID) {
         inputUsers.push({_: 'inputUserContact', user_id: userID});
@@ -1398,11 +1417,9 @@ angular.module('myApp.controllers', [])
 
         var peerString = AppChatsManager.getChatString(createdResult.message.to_id.chat_id);
         $rootScope.$broadcast('history_focus', {peerString: peerString});
+      })['finally'](function () {
+        delete $scope.group.creating;
       });
-    };
-
-    $scope.back = function () {
-      $modalInstance.dismiss();
     };
 
   })
@@ -1419,6 +1436,8 @@ angular.module('myApp.controllers', [])
       if ($scope.group.name == chat.title) {
         return $modalInstance.close();
       }
+
+      $scope.group.updating = true;
 
       return MtpApiManager.invokeApi('messages.editChatTitle', {
         chat_id: $scope.chatID,
@@ -1437,6 +1456,8 @@ angular.module('myApp.controllers', [])
 
         var peerString = AppChatsManager.getChatString($scope.chatID);
         $rootScope.$broadcast('history_focus', {peerString: peerString});
+      })['finally'](function () {
+        delete $scope.group.updating;
       });
     };
   })
