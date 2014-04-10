@@ -59,10 +59,10 @@
     </div>
 
     <div class="im_history_col_wrap" ng-controller="AppImHistoryController">
-      <div ng-show="state.notSelected" class="im_history_not_selected" my-vertical-position="0.3">
+      <div ng-show="state.notSelected" class="im_history_not_selected" my-vertical-position="0.35">
         没有相应的历史记录，您可以从左侧选择一个会话。
       </div>
-      <div ng-show="!state.notSelected &amp;&amp; !state.loaded" class="im_history_not_selected" my-vertical-position="0.3">
+      <div ng-show="!state.notSelected &amp;&amp; !state.loaded" class="im_history_not_selected" my-vertical-position="0.35">
         正在读取历史记录<span my-loading-dots></span>
       </div>
 
@@ -78,7 +78,7 @@
                 <a class="im_history_panel_edit_link pull-right" ng-click="toggleEdit()">编辑历史记录（本地）</a>
 
                 <div class="dropdown im_history_panel_media_dropdown pull-right">
-                  <a class="dropdown-toggle">群共享<i class="icon icon-caret"></i></a>
+                  <a class="dropdown-toggle">文件分享<i class="icon icon-caret"></i></a>
                   <ul class="dropdown-menu">
                     <li><a ng-click="toggleMedia('photos')">图片</a></li>
                     <li><a ng-click="toggleMedia('video')">视频</a></li>
@@ -122,11 +122,16 @@
             <div class="im_history_scrollable_wrap content">
 
               <div class="im_history_scrollable">
-
                   <div class="im_history" ng-class="{im_history_selectable: selectActions}">
-                    <div class="im_history_empty" ng-show="!history.length" my-vertical-position="0.3">
-                      正在获取相关历史记录…
+                    <div ng-if="!history.length"  class="im_history_empty" ng-switch="state.mayBeHasMore">
+                      <div my-vertical-position="0.25" ng-switch-when="true">
+                        正在获取相关历史记录<span my-loading-dots></span>
+                      </div>
+                      <div my-vertical-position="0.25" ng-switch-default>
+                        未查到相关历史记录…
+                      </div>
                     </div>
+
                     <div class="im_history_messages">
                       <div class="im_history_message_wrap" my-message bindonce ng-repeat="historyMessage in history"></div>
                     </div>
@@ -196,7 +201,7 @@
                       <i class="icon icon-paperclip"></i>
                     </div>
 
-                    <div class="im_emoji_btn pull-right">
+                    <div class="im_emoji_btn pull-right" title="Insert emoticon">
                       <i class="icon icon-emoji"></i>
                     </div>
 

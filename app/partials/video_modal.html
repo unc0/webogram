@@ -4,7 +4,14 @@
 
     <div class="video_modal_image_wrap" my-load-video video="video"></div>
 
-    <p class="media_modal_info">来自：<span class="media_modal_author" ng-bind-html="video.fromUser.rFullName"></span>, {{video.date | dateOrTime}}</p>
+    <div class="media_modal_actions pull-right" ng-if="messageID">
+      <a href="" class="media_modal_action_link" ng-click="forward()">转发</a>
+      <a href="" class="media_modal_action_link" ng-click="delete()">删除</a>
+    </div>
+
+    <p class="media_modal_info">
+      <span class="media_modal_author" ng-bind-html="video.fromUser.rFullName" ></span>, {{video.date | dateOrTime}}
+    </p>
 
   </div>
 
