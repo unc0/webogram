@@ -149,6 +149,37 @@ angular.module('myApp.directives', ['myApp.filters'])
 
   })
 
+  .directive('myCountriesList', function($window, $timeout) {
+
+    return {
+      link: link
+    };
+
+    function link ($scope, element, attrs) {
+      var searchWrap = $('.countries_modal_search')[0],
+          panelWrap = $('.countries_modal_panel')[0],
+          countriesWrap = $('.countries_wrap', element)[0];
+
+      onContentLoaded(function () {
+        $(countriesWrap).nanoScroller({preventPageScrolling: true, tabIndex: -1, iOSNativeScrolling: true});
+        updateSizes();
+      });
+
+      function updateSizes () {
+        $(element).css({
+          height: $($window).height() - (panelWrap && panelWrap.offsetHeight || 0) - (searchWrap && searchWrap.offsetHeight || 0) - 200
+        });
+        $(countriesWrap).nanoScroller();
+      }
+
+      $($window).on('resize', updateSizes);
+      $scope.$on('contacts_change', function () {
+        onContentLoaded(updateSizes)
+      });
+    };
+
+  })
+
   .directive('myHistory', function ($window, $timeout, $transition) {
 
     return {
@@ -281,7 +312,9 @@ angular.module('myApp.directives', ['myApp.filters'])
           moreNotified = false;
 
           $timeout(function () {
-            $(scrollableWrap).trigger('scroll');
+            if (scrollableWrap.scrollHeight != sh) {
+              $(scrollableWrap).trigger('scroll');
+            }
           });
         });
       });
@@ -295,6 +328,18 @@ angular.module('myApp.directives', ['myApp.filters'])
             $(scrollableWrap).trigger('scroll');
           });
         });
+      });
+
+      $scope.$on('ui_selection_clear', function () {
+        if (window.getSelection) {
+          if (window.getSelection().empty) {  // Chrome
+            window.getSelection().empty();
+          } else if (window.getSelection().removeAllRanges) {  // Firefox
+            window.getSelection().removeAllRanges();
+          }
+        } else if (document.selection) {  // IE?
+          document.selection.empty();
+        }
       });
 
       $scope.$on('ui_editor_resize', updateSizes);
@@ -972,6 +1017,18 @@ angular.module('myApp.directives', ['myApp.filters'])
     };
   })
 
+  .directive('myFocusOn', function(){
+    return {
+      link: function($scope, element, attrs) {
+        $scope.$on(attrs.myFocusOn, function () {
+          onContentLoaded(function () {
+            element[0].focus();
+          });
+        });
+      }
+    };
+  })
+
   .directive('myFileUpload', function(){
 
     return {
@@ -1045,6 +1102,55 @@ angular.module('myApp.directives', ['myApp.filters'])
       });
     };
   })
+
+  .directive('myCustomBackground', function () {
+
+    return {
+      link: link
+    };
+
+    function link($scope, element, attrs) {
+
+      console.log(dT(), 'bg', attrs.myCustomBackground);
+      $('html').css({background: attrs.myCustomBackground});
+
+      $scope.$on('$destroy', function () {
+        $('html').css({background: ''});
+      });
+    };
+  })
+
+  .directive('myInfiniteScroller', function () {
+
+    return {
+      link: link,
+      scope: true
+    };
+
+    function link($scope, element, attrs) {
+
+      var scrollableWrap = $('.content', element)[0],
+          moreNotified = false;
+
+      $(scrollableWrap).on('scroll', function (e) {
+        if (!moreNotified &&
+            scrollableWrap.scrollTop >= scrollableWrap.scrollHeight - scrollableWrap.clientHeight - 300) {
+          moreNotified = true;
+          $scope.$apply(function () {
+            $scope.slice.limit += ($scope.slice.limitDelta || 20);
+          });
+
+          onContentLoaded(function () {
+            moreNotified = false;
+            $(element).nanoScroller();
+          });
+        }
+      });
+
+    };
+  })
+
+
 
 
   .directive('myModalPosition', function ($window, $timeout) {

@@ -9,6 +9,11 @@
       <span ng-switch-when="WEBOGRAM_UPDATED_RELOAD">有新版本的 Webogram 可用，是否更新？</span>
       <span ng-switch-when="HISTORY_FLUSH">您确定要这样做吗？此操作将无法撤销。</span>
       <span ng-switch-when="TERMINATE_SESSIONS">您确定要只保留此会话并将其他设备上的会话都登出吗？</span>
+      <span ng-switch-when="HTTPS_MIXED_FAIL">
+        您的浏览器并未支持 MTProto 协议的混合连接功能，无法使用 HTTPS 加密模式。<a href="https://github.com/zhukov/webogram/issues/237" target="_blank">了解更多 &raquo;</a><br/><br/>
+        您是否愿意使用 HTTP 模式作为替代？
+      </span>
+
       <span ng-switch-when="FILES_CLIPBOARD_PASTE">
         <ng-pluralize count="files.length"
                      when="{'one': '您确定要将剪贴板内的 1 个文件发送出去吗？', 'other': '您确定要将剪贴板内的 {} 个文件发送出去吗？'}">
@@ -16,7 +21,19 @@
       </span>
       <span ng-switch-when="FILE_CLIPBOARD_PASTE">您确定要将剪贴板内的文件发送出去吗？</span>
       <span ng-switch-when="MESSAGE_DELETE">您确定要删除此信息吗？</span>
-      <span ng-switch-default ng-bind="message || '您确定？'"></span>
+      <div ng-switch-when="LOGIN_PHONE_CORRECT">
+        您确定此电话号码没有输入错误吗？
+        <div class="confirm_phone_number"> <span ng-bind="country_code"></span> <span ng-bind="phone_number"></span> </div>
+      </div>
+      <span ng-switch-when="FORWARD_PEER">转发到 <strong ng-switch="peer_id > 0">
+        <span ng-switch-when="true" ng-bind-html="peer_data.rFullName"></span>
+        <span ng-switch-default ng-bind-html="peer_data.rTitle"></span>
+      </strong>？</span>
+      <span ng-switch-when="SHARE_CONTACT_PEER">发送到 <strong ng-switch="peer_id > 0">
+        <span ng-switch-when="true" ng-bind-html="peer_data.rFullName"></span>
+        <span ng-switch-default ng-bind-html="peer_data.rTitle"></span>
+      </strong>？</span>
+      <span ng-switch-default ng-bind="message || '你确定？'"></span>
     </div>
 
   </div>
@@ -31,6 +48,10 @@
       <span ng-switch-when="FILES_CLIPBOARD_PASTE">发送</span>
       <span ng-switch-when="FILE_CLIPBOARD_PASTE">发送</span>
       <span ng-switch-when="MESSAGE_DELETE">删除</span>
+      <span ng-switch-when="FORWARD_PEER">转发信息</span>
+      <span ng-switch-when="PHOTO_SHARE_PEER">转发照片</span>
+      <span ng-switch-when="VIDEO_SHARE_PEER">转发视频</span>
+      <span ng-switch-when="SHARE_CONTACT_PEER">发送联系人</span>
       <span ng-switch-default>确定</span>
     </button>
   </div>

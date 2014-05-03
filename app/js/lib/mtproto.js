@@ -775,7 +775,9 @@ TLDeserialization.prototype.fetchBool = function (field) {
   } else if (i == 0xbc799737) {
     return false
   }
-  throw new Error('Unknown Bool constructor ' + i);
+
+  this.offset -= 4;
+  return this.fetchObject('Object', field);
 }
 
 TLDeserialization.prototype.fetchString = function (field) {
@@ -1194,14 +1196,25 @@ factory('MtpAuthorizer', function (MtpDcConfigurator, MtpRsaKeysManager, MtpSecu
       transformResponse: function (responseBuffer) {
         var deserializer = new TLDeserialization(responseBuffer, {mtproto: true});
 
-        var auth_key_id = deserializer.fetchLong('auth_key_id');
-        var msg_id      = deserializer.fetchLong('msg_id');
-        var msg_len     = deserializer.fetchInt('msg_len');
+        try {
+
+          var auth_key_id = deserializer.fetchLong('auth_key_id');
+          var msg_id      = deserializer.fetchLong('msg_id');
+          var msg_len     = deserializer.fetchInt('msg_len');
+
+        } catch (e) {
+          return $q.reject({code: 406, type: 'NETWORK_BAD_RESPONSE', problem: e.message, stack: e.stack});
+        }
 
         rng_seed_time();
 
         return deserializer;
       }
+    })['catch'](function (error) {
+      if (!error.message && !error.type) {
+        error = {code: 406, type: 'NETWORK_BAD_REQUEST'};
+      }
+      return $q.reject(error);
     });
   };
 
@@ -2187,6 +2200,11 @@ factory('MtpNetworkerFactory', function (MtpDcConfigurator, MtpMessageIdGenerato
       return $http.post('http://' + MtpDcConfigurator.chooseServer(self.dcID) + '/apiw1', resultArray, {
         responseType: 'arraybuffer',
         transformRequest: null
+      })['catch'](function (error) {
+        if (!error.message && !error.type) {
+          error = {code: 406, type: 'NETWORK_BAD_REQUEST'};
+        }
+        return $q.reject(error);
       });
     });
   };
@@ -2637,7 +2655,10 @@ factory('MtpApiManager', function (AppConfigManager, MtpAuthorizer, MtpNetworker
         },
         function (error) {
           console.error(dT(), 'Error', error.code, error.type, baseDcID, dcID);
-          if (error.code == 401 && baseDcID && dcID != baseDcID) {
+          if (error.code == 401 && baseDcID == dcID) {
+            AppConfigManager.remove('dc', 'user_auth');
+          }
+          else if (error.code == 401 && baseDcID && dcID != baseDcID) {
             if (cachedExportPromise[dcID] === undefined) {
               var exportDeferred = $q.defer();
 

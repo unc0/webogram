@@ -564,7 +564,7 @@ angular.module('myApp.services', [])
   var badCharsRe = /[`~!@#$%^&*()\-_=+\[\]\\|{}'";:\/?.>,<\s]+/g,
       trimRe = /^\s+|\s$/g,
       accentsReplace = {
-        a: /[áâäà]/g,
+        a: /[åáâäà]/g,
         e: /[éêëè]/g,
         i: /[íîïì]/g,
         o: /[óôöò]/g,
@@ -892,16 +892,17 @@ angular.module('myApp.services', [])
   function getSearch (inputPeer, query, inputFilter, maxID, limit) {
     var foundMsgs = [],
         useSearchCache = !query,
-        sameSearchCache = useSearchCache && angular.equals(lastSearchFilter, inputFilter);
+        peerID = AppPeersManager.getPeerID(inputPeer),
+        newSearchFilter = {peer: peerID, filter: inputFilter},
+        sameSearchCache = useSearchCache && angular.equals(lastSearchFilter, newSearchFilter);
 
     if (useSearchCache && !sameSearchCache) {
-      lastSearchFilter = inputFilter;
+      lastSearchFilter = newSearchFilter;
       lastSearchResults = [];
     }
 
     if (!maxID && !query) {
-      var peerID = AppPeersManager.getPeerID(inputPeer),
-          historyStorage = historiesStorage[peerID];
+      var historyStorage = historiesStorage[peerID];
 
       if (historyStorage !== undefined && historyStorage.history.length) {
         var neededContents = {},
@@ -3270,9 +3271,11 @@ angular.module('myApp.services', [])
 
 .service('PeersSelectService', function ($rootScope, $modal) {
 
-  function selectPeer () {
+  function selectPeer (options) {
     var scope = $rootScope.$new();
-    // angular.extend(scope, params);
+    if (options) {
+      angular.extend(scope, options);
+    }
 
     return $modal.open({
       templateUrl: 'partials/peer_select.html',
