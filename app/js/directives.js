@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.0.21 - messaging web application for MTProto
+ * Webogram v0.1.1 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -833,7 +833,7 @@ angular.module('myApp.directives', ['myApp.filters'])
         }
       }
 
-      var downloadPromise = MtpApiFileManager.downloadFile($scope.video.dc_id, inputLocation, $scope.video.size, null, {mime: 'video/mp4'});
+      var downloadPromise = MtpApiFileManager.downloadFile($scope.video.dc_id, inputLocation, $scope.video.size, {mime: 'video/mp4'});
 
       downloadPromise.then(function (url) {
         $scope.progress.enabled = false;

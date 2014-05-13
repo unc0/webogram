@@ -13,19 +13,19 @@
       </div>
 
 
-      <div class="navbar-collapse collapse">
+      <div class="navbar-collapse collapse" ng-switch="offline">
 
-        <ul ng-if="offline" class="nav navbar-nav navbar-offline">
-          <li ng-show="!offlineConnecting"><span class="navbar-offline-text">离线状态，请连接互联网</span></li>
+        <ul ng-switch-when="true" class="nav navbar-nav navbar-offline">
+          <li ng-show="!offlineConnecting"><span class="navbar-offline-text">离线状态，请连接互联网<span my-loading-dots></span></span></li>
           <li ng-show="!offlineConnecting"><a href="" ng-click="retryOnline()">重试</a></li>
-          <li ng-show="offlineConnecting"><span class="navbar-offline-text">正在连接<span my-typing-dots></span></span></li>
+          <li ng-show="offlineConnecting"><span class="navbar-offline-text">正在连接<span my-loading-dots></span></span></li>
         </ul>
 
-        <ul ng-if="!offline" class="nav navbar-nav navbar-right">
+        <ul ng-switch-default class="nav navbar-nav navbar-right">
           <li ng-if="isLoggedIn"><a href="" ng-click="openContacts()">联系人</a></li>
           <li ng-if="isLoggedIn"><a href="" ng-click="openSettings()">设置</a></li>
           <li ng-if="isLoggedIn"><a href="" ng-click="logOut()">登出</a></li>
-          <li ng-if="!isLoggedIn"><a href="https://github.com/zhukov/webogram" target="_blank">关于</a></li>
+          <li ng-if="!isLoggedIn"><a href="" ng-click="openAbout()">关于</a></li>
 					<li><a href="" ng-click="hideWindow()">_</a></li>
 					<li><a href="" ng-click="closeWindow()">x</a></li>
         </ul>
