@@ -83,6 +83,7 @@
                     <li><a ng-click="toggleMedia('photos')">图片</a></li>
                     <li><a ng-click="toggleMedia('video')">视频</a></li>
                     <li><a ng-click="toggleMedia('documents')">文档</a></li>
+                    <li><a ng-click="toggleMedia('audio')">语音信息</a></li>
                   </ul>
                 </div>
                 <a ng-show="mediaType !== false" class="im_history_panel_return_link pull-right" ng-click="toggleMedia()">
@@ -94,6 +95,7 @@
                   <h4 ng-switch-when="photos">图片</h4>
                   <h4 ng-switch-when="video">视频</h4>
                   <h4 ng-switch-when="documents">文档</h4>
+                  <h4 ng-switch-when="audio">语音信息</h4>
 
                   <h4 ng-switch-default ng-switch="historyPeer.id > 0" ng-click="showPeerInfo()">
                     <div ng-switch-when="true">
