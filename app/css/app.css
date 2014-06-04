@@ -956,7 +956,8 @@ a.tg_radio_on:hover i.icon-radio {
   padding: 8px 9px;
   border-radius: 0;
 }
-.im_dialogs_scrollable_wrap a.im_dialog:hover {
+.im_dialogs_scrollable_wrap a.im_dialog:hover,
+.im_dialogs_scrollable_wrap a.im_dialog_selected {
   border-radius: 2px;
   background: #f2f6fa;
 }
@@ -964,7 +965,8 @@ a.tg_radio_on:hover i.icon-radio {
   border-radius: 2px;
   background-color: #6490b1;
 }
-.im_dialogs_scrollable_wrap .active a.im_dialog:hover {
+.im_dialogs_scrollable_wrap .active a.im_dialog:hover,
+.im_dialogs_scrollable_wrap .active a.im_dialog_selected {
   background-color: #6490b1;
 }
 
@@ -985,7 +987,8 @@ a.tg_radio_on:hover i.icon-radio {
 .im_dialog_message_text {
   color: #808080;
 }
-a.im_dialog:hover .im_dialog_message_text {
+a.im_dialog:hover .im_dialog_message_text,
+a.im_dialog_selected .im_dialog_message_text {
   color: #698192;
 }
 .active a.im_dialog .im_dialog_chat_from_wrap,
@@ -1038,7 +1041,8 @@ a.im_dialog:hover .im_dialog_message_text {
   margin: 10px 0 0;
 }
 
-a.im_dialog:hover .im_dialog_unread {
+a.im_dialog:hover .im_dialog_unread,
+a.im_dialog_selected .im_dialog_unread {
   background: #a3c0d4;
 }
 .active .im_dialog_unread {
@@ -1050,11 +1054,13 @@ a.im_dialog:hover .im_dialog_unread {
   color: #b3b3b3;
   font-size: 0.85em;
 }
-a.im_dialog:hover .im_dialog_date {
+a.im_dialog:hover .im_dialog_date,
+a.im_dialog_selected .im_dialog_date {
   color: #91a6ba;
 }
 .active .im_dialog_date,
-.active a.im_dialog:hover .im_dialog_date {
+.active a.im_dialog:hover .im_dialog_date,
+.active a.im_dialog_selected .im_dialog_date {
   color: #b8d1e4;
 }
 
@@ -2915,9 +2921,6 @@ a.contacts_modal_contact:hover .contacts_modal_contact_status {
   .tg_page_head .navbar > .container .navbar-brand {
     padding-left: 9px;
   }
-  .im_history_panel_info_link {
-    display: none;
-  }
   .im_history_panel_edit_link {
     margin-right: 0;
   }
@@ -2935,7 +2938,12 @@ a.contacts_modal_contact:hover .contacts_modal_contact_status {
     -webkit-box-shadow: none;
     margin: 30px auto 20px;
   }
+}
 
+@media (max-width: 640px) {
+  .im_page_footer {
+    display: none;
+  }
 
   .im_panel_own_photo,
   .im_panel_peer_photo {
@@ -2955,6 +2963,9 @@ a.contacts_modal_contact:hover .contacts_modal_contact_status {
   }
   .im_history_typing {
     padding: 0 15px 0 60px;
+  }
+  .im_history_panel_info_link {
+    display: none;
   }
 
   .im_send_form {
@@ -2976,19 +2987,6 @@ a.contacts_modal_contact:hover .contacts_modal_contact_status {
   }
   .im_edit_panel_wrap {
     margin: 0 5px;
-    padding-bottom: 34px;
-  }
-}
-
-@media (max-height: 600px) {
-  .im_page_footer {
-    display: none;
-  }
-
-  .im_send_panel_wrap {
-    padding-bottom: 10px;
-  }
-  .im_edit_panel_wrap {
     padding-bottom: 18px;
   }
 
@@ -2996,9 +2994,7 @@ a.contacts_modal_contact:hover .contacts_modal_contact_status {
     min-height: 34px;
     max-height: 150px;
   }
-}
 
-@media (max-width: 640px) {
   .im_dialog_peer {
     white-space: normal;
     height: 2.84em;
@@ -3380,3 +3376,31 @@ ce671b orange
   }
 }
 
+
+.changelog_modal_window .modal-dialog {
+  max-width: 506px;
+}
+.changelog_card_wrap {
+  text-align: center;
+  padding: 12px 0 18px;
+}
+.changelog_header {
+  margin-top: 15px;
+  font-size: 16px;
+}
+.changelog_card {
+  width: 160px;
+  height: 160px;
+  display: block;
+  background: url(../img/changelog/card_wecandoit.png) no-repeat 0 0;
+  background-size: 160px 160px;
+  margin: 0 auto;
+}
+
+.changelog_version_title {
+  color: #9d9479;
+  background: #efede3;
+}
+.changelog_version_changes_list li {
+  line-height: 20px;
+}

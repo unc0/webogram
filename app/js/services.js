@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.1.2 - messaging web application for MTProto
+ * Webogram v0.1.3 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -12,7 +12,7 @@
 angular.module('myApp.services', [])
 
 .service('AppConfigManager', function ($q) {
-  var testPrefix = window._testMode ? 't_' : '';
+  var testPrefix = Config.Modes.test ? 't_' : '';
   var cache = {};
   var useCs = !!(window.chrome && chrome.storage && chrome.storage.local);
   var useLs = !useCs && !!window.localStorage;
@@ -3395,5 +3395,69 @@ angular.module('myApp.services', [])
     selectContact: function (options) {
       return select (false, options);
     },
+  }
+})
+
+
+.service('ChangelogNotifyService', function (AppConfigManager, $rootScope, $http, $modal) {
+
+  function versionCompare (ver1, ver2) {
+    if (typeof ver1 !== 'string') {
+      ver1 = '';
+    }
+    if (typeof ver2 !== 'string') {
+      ver2 = '';
+    }
+    // console.log('ss', ver1, ver2);
+    ver1 = ver1.replace(/^\s+|\s+$/g, '').split('.');
+    ver2 = ver2.replace(/^\s+|\s+$/g, '').split('.');
+
+    var a = Math.max(ver1.length, ver2.length), i;
+
+    for (i = 0; i < a; i++) {
+      if (ver1[i] == ver2[i]) {
+        continue;
+      }
+      if (ver1[i] > ver2[i]) {
+        return 1;
+      } else {
+        return -1;
+      }
+    }
+
+    return 0;
+  }
+
+  function checkUpdate () {
+    AppConfigManager.get('last_version').then(function (lastVersion) {
+      if (lastVersion != Config.App.version) {
+        showChangelog(lastVersion || '0');
+        AppConfigManager.set({last_version: Config.App.version});
+      }
+    })
+  }
+
+  function showChangelog (lastVersion) {
+    var $scope = $rootScope.$new();
+
+    $scope.lastVersion = lastVersion;
+    $scope.canShowVersion = function (curVersion) {
+      if ($scope.lastVersion === false || $scope.lastVersion === undefined) {
+        return true;
+      }
+
+      return versionCompare(curVersion, lastVersion) > 0;
+    };
+
+    $modal.open({
+      templateUrl: 'partials/changelog_modal.html',
+      scope: $scope,
+      windowClass: 'changelog_modal_window'
+    });
+  }
+
+  return {
+    checkUpdate: checkUpdate,
+    showChangelog: showChangelog
   }
 })

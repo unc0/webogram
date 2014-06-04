@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.1.2 - messaging web application for MTProto
+ * Webogram v0.1.3 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -27,6 +27,142 @@ angular.module('myApp.directives', ['myApp.filters'])
       translude: false,
       templateUrl: 'partials/message.html'
     };
+  })
+
+  .directive('myDialogs', function ($modalStack) {
+
+    return {
+      link: link
+    };
+
+
+    function link ($scope, element, attrs) {
+      var dialogsWrap = $('.im_dialogs_wrap', element)[0],
+          scrollableWrap = $('.im_dialogs_scrollable_wrap', element)[0],
+          searchField = $('.im_dialogs_search_field', element)[0],
+          searchFocused = false;
+
+
+      $(searchField).on('focus blur', function (e) {
+        searchFocused = e.type == 'focus';
+
+        if (!searchFocused) {
+          $(scrollableWrap).find('.im_dialog_selected').removeClass('im_dialog_selected');
+        }
+      });
+
+      function onKeyDown(e) {
+        if (!searchFocused && $modalStack.getTop()) {
+          return true;
+        }
+
+        if (e.keyCode >= 48 && e.keyCode <= 57 && !e.shiftKey && e.altKey) { // Alt + [0-9 keys]
+          var currentSelected = $(scrollableWrap).find('.im_dialog_wrap a')[(e.keyCode - 48 || 10) - 1];
+          if (currentSelected) {
+            currentSelected.click();
+          }
+          return cancelEvent(e);
+        }
+        if (e.keyCode >= 96 && e.keyCode <= 105 && !e.shiftKey && e.altKey) { // Alt + [0-9 numpad keys]
+          var currentSelected = $(scrollableWrap).find('.im_dialog_wrap a')[(e.keyCode - 96 || 10) - 1];
+          if (currentSelected) {
+            currentSelected.click();
+          }
+          return cancelEvent(e);
+        }
+
+        if (e.keyCode == 27 || e.keyCode == 9 && e.shiftKey) { // ESC or Shift + Tab
+          if (!searchFocused) {
+            searchField.focus();
+            if (searchField.value) {
+              searchField.select();
+            }
+          }
+          return cancelEvent(e);
+        }
+
+        if (searchFocused && e.keyCode == 13) { // Enter
+          var currentSelected = $(scrollableWrap).find('.im_dialog_selected')[0] || $(scrollableWrap).find('.im_dialog_wrap a')[0];
+          if (currentSelected) {
+            currentSelected.click();
+          }
+          return cancelEvent(e);
+        }
+
+        if (e.keyCode == 38 || e.keyCode == 40) { // UP, DOWN
+          var skip = !e.shiftKey && e.altKey;
+          if (!skip && (!searchFocused || e.metaKey)) {
+            return true;
+          }
+
+          var next = e.keyCode == 40,
+              currentSelected = !skip && $(scrollableWrap).find('.im_dialog_selected')[0] || $(scrollableWrap).find('.active a.im_dialog')[0],
+              currentSelectedWrap = currentSelected && currentSelected.parentNode,
+              nextDialogWrap;
+
+          if (currentSelectedWrap) {
+            var nextDialogWrap = currentSelected[next ? 'nextSibling' : 'previousSibling'];
+
+            if (!nextDialogWrap || !nextDialogWrap.className || nextDialogWrap.className.indexOf('im_dialog_wrap') == -1) {
+              var dialogWraps = $(scrollableWrap).find('.im_dialog_wrap'),
+                  pos = dialogWraps.index(currentSelected.parentNode),
+                  nextPos = pos + (next ? 1 : -1);
+
+              nextDialogWrap = dialogWraps[nextPos];
+            }
+          } else {
+            var dialogWraps = $(scrollableWrap).find('.im_dialog_wrap');
+            if (next) {
+              nextDialogWrap = dialogWraps[0];
+            } else {
+              nextDialogWrap = dialogWraps[dialogWraps.length - 1];
+            }
+          }
+
+          if (skip) {
+            if (nextDialogWrap) {
+              $(nextDialogWrap).find('a')[0].click();
+            }
+          } else {
+            if (currentSelectedWrap && nextDialogWrap) {
+              $(currentSelectedWrap).find('a').removeClass('im_dialog_selected');
+            }
+            if (nextDialogWrap) {
+              $(nextDialogWrap).find('a').addClass('im_dialog_selected');
+            }
+          }
+
+          if (nextDialogWrap) {
+            var elTop = nextDialogWrap.offsetTop,
+                elHeight = nextDialogWrap.offsetHeight,
+                scrollTop = scrollableWrap.scrollTop,
+                viewportHeight = scrollableWrap.clientHeight;
+
+
+            if (scrollTop > elTop) {
+              scrollableWrap.scrollTop = elTop;
+              $(dialogsWrap).nanoScroller({flash: true});
+            }
+            else if (scrollTop < elTop + elHeight - viewportHeight) {
+              scrollableWrap.scrollTop = elTop + elHeight - viewportHeight;
+              $(dialogsWrap).nanoScroller({flash: true});
+            }
+
+          }
+
+          return cancelEvent(e);
+        }
+      }
+
+      $(document).on('keydown', onKeyDown);
+
+      $scope.$on('$destroy', function () {
+        $(document).off('keydown', onKeyDown);
+      });
+
+    }
+
+
   })
 
   .directive('myDialogsList', function($window, $timeout) {
@@ -417,7 +553,7 @@ angular.module('myApp.directives', ['myApp.filters'])
 
   })
 
-  .directive('mySendForm', function ($timeout, AppConfigManager, ErrorService) {
+  .directive('mySendForm', function ($timeout, $modalStack, AppConfigManager, ErrorService) {
 
     return {
       link: link,
@@ -498,6 +634,12 @@ angular.module('myApp.directives', ['myApp.filters'])
 
       });
 
+      $('.im_submit', element).on('mousedown', function (e) {
+        $(element).trigger('submit');
+        $(element).trigger('message_send');
+        return cancelEvent(e);
+      });
+
       var lastTyping = 0;
       $(editorElement).on('keyup', function (e) {
         var now = tsNow();
@@ -534,13 +676,21 @@ angular.module('myApp.directives', ['myApp.filters'])
         }
       };
 
+      function onKeyDown(e) {
+        if (e.keyCode == 9 && !e.shiftKey && !$modalStack.getTop()) { // TAB
+          editorElement.focus();
+          return cancelEvent(e);
+        }
+      }
+      $(document).on('keydown', onKeyDown);
+
       $('body').on('dragenter dragleave dragover drop', onDragDropEvent);
       $(document).on('paste', onPasteEvent);
       if (richTextarea) {
         $(richTextarea).on('DOMNodeInserted', onPastedImageEvent);
       }
 
-      if (!window._mobile) {
+      if (!Config.Navigator.mobile) {
         $scope.$on('ui_peer_change', focusField);
         $scope.$on('ui_history_focus', focusField);
         $scope.$on('ui_history_change', focusField);
@@ -555,12 +705,13 @@ angular.module('myApp.directives', ['myApp.filters'])
       $scope.$on('$destroy', function cleanup() {
         $('body').off('dragenter dragleave dragover drop', onDragDropEvent);
         $(document).off('paste', onPasteEvent);
+        $(document).off('keydown', onKeyDown);
         if (richTextarea) {
           $(richTextarea).off('DOMNodeInserted', onPastedImageEvent);
         }
       });
 
-      if (!window._mobile) {
+      if (!Config.Navigator.mobile) {
         focusField();
       }
 
@@ -1020,7 +1171,7 @@ angular.module('myApp.directives', ['myApp.filters'])
   .directive('myFocused', function(){
     return {
       link: function($scope, element, attrs) {
-        if (window._mobile) {
+        if (Config.Navigator.mobile) {
           return false;
         }
         setTimeout(function () {
@@ -1034,7 +1185,7 @@ angular.module('myApp.directives', ['myApp.filters'])
     return {
       link: function($scope, element, attrs) {
         $scope.$on(attrs.myFocusOn, function () {
-          if (window._mobile) {
+          if (Config.Navigator.mobile) {
             return false;
           }
           onContentLoaded(function () {

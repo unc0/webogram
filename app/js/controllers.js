@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.1.2 - messaging web application for MTProto
+ * Webogram v0.1.3 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -130,8 +130,8 @@ angular.module('myApp.controllers', [])
           MtpApiManager.invokeApi('auth.sendCode', {
             phone_number: $scope.credentials.phone_full,
             sms_type: 0,
-            api_id: 2496,
-            api_hash: '8da85b0d5bfe62527e5b244c209159c3'
+            api_id: Config.App.id,
+            api_hash: Config.App.hash
           }, options).then(function (sentCode) {
             $scope.progress.enabled = false;
 
@@ -220,7 +220,7 @@ angular.module('myApp.controllers', [])
     };
   })
 
-  .controller('AppIMController', function ($scope, $location, $routeParams, $modal, $rootScope, $modalStack, MtpApiManager, AppUsersManager, ContactsSelectService, ErrorService) {
+  .controller('AppIMController', function ($scope, $location, $routeParams, $modal, $rootScope, $modalStack, MtpApiManager, AppUsersManager, ContactsSelectService, ChangelogNotifyService, ErrorService) {
 
     $scope.$on('$routeUpdate', updateCurDialog);
 
@@ -301,6 +301,8 @@ angular.module('myApp.controllers', [])
         peer: $routeParams.p || false
       };
     }
+
+    ChangelogNotifyService.checkUpdate();
   })
 
   .controller('AppImDialogsController', function ($scope, $location, MtpApiManager, AppUsersManager, AppChatsManager, AppMessagesManager, AppPeersManager, ErrorService) {
@@ -577,7 +579,7 @@ angular.module('myApp.controllers', [])
       }
       // console.trace('load history');
 
-      var curJump = jump,
+      var curJump = ++jump,
           inputMediaFilter = $scope.mediaType && {_: inputMediaFilters[$scope.mediaType]},
           getMessagesPromise = inputMediaFilter
         ? AppMessagesManager.getSearch($scope.curDialog.inputPeer, '', inputMediaFilter, maxID)
@@ -1419,10 +1421,11 @@ angular.module('myApp.controllers', [])
 
   })
 
-  .controller('SettingsModalController', function ($rootScope, $scope, $timeout, $modal, AppUsersManager, AppChatsManager, MtpApiManager, AppConfigManager, NotificationsManager, MtpApiFileManager, ApiUpdatesManager, ErrorService) {
+  .controller('SettingsModalController', function ($rootScope, $scope, $timeout, $modal, AppUsersManager, AppChatsManager, MtpApiManager, AppConfigManager, NotificationsManager, MtpApiFileManager, ApiUpdatesManager, ChangelogNotifyService, ErrorService) {
 
     $scope.profile = {};
     $scope.photo = {};
+    $scope.version = Config.App.version;
 
     MtpApiManager.getUserID().then(function (id) {
       $scope.profile = AppUsersManager.getUser(id);
@@ -1558,6 +1561,10 @@ angular.module('myApp.controllers', [])
           AppConfigManager.set({send_ctrlenter: true});
         }
         $rootScope.$broadcast('settings_changed');
+      }
+
+      $scope.openChangelog = function () {
+        ChangelogNotifyService.showChangelog(false);
       }
     });
   })
