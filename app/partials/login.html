@@ -26,7 +26,7 @@
   </form>
 
   <form name="myLoginForm" ng-if="credentials.phone_code_hash" ng-submit="logIn()">
-    <h3 class="login_form_head"><span ng-bind="credentials.phone_country"></span> <span ng-bind="credentials.phone_number"></span> <small>(<a ng-click="credentials.phone_code_hash = ''">编辑号码</a>)</small></h3>
+    <h3 class="login_form_head"><span ng-bind="credentials.phone_country"></span> <span ng-bind="credentials.phone_number"></span> <small>(<a ng-click="editPhone()">编辑号码</a>)</small></h3>
     <p class="login_form_lead">已经向您的手机发送了一条包含认证码的短信。<br/>请输入在下方。</p>
 
     <p class="login_form_lead">

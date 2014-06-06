@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.1.3 - messaging web application for MTProto
+ * Webogram v0.1.4 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -56,22 +56,17 @@ angular.module('myApp.directives', ['myApp.filters'])
           return true;
         }
 
-        if (e.keyCode >= 48 && e.keyCode <= 57 && !e.shiftKey && e.altKey) { // Alt + [0-9 keys]
-          var currentSelected = $(scrollableWrap).find('.im_dialog_wrap a')[(e.keyCode - 48 || 10) - 1];
+        if (e.keyCode == 36 &&  !e.shiftKey && !e.ctrlKey && e.altKey) { // Alt + Home
+          var currentSelected = $(scrollableWrap).find('.im_dialog_wrap a')[0];
           if (currentSelected) {
             currentSelected.click();
-          }
-          return cancelEvent(e);
-        }
-        if (e.keyCode >= 96 && e.keyCode <= 105 && !e.shiftKey && e.altKey) { // Alt + [0-9 numpad keys]
-          var currentSelected = $(scrollableWrap).find('.im_dialog_wrap a')[(e.keyCode - 96 || 10) - 1];
-          if (currentSelected) {
-            currentSelected.click();
+            scrollableWrap.scrollTop = 0;
+            $(dialogsWrap).nanoScroller({flash: true});
           }
           return cancelEvent(e);
         }
 
-        if (e.keyCode == 27 || e.keyCode == 9 && e.shiftKey) { // ESC or Shift + Tab
+        if (e.keyCode == 27 || e.keyCode == 9 && e.shiftKey && !e.ctrlKey && !e.metaKey) { // ESC or Shift + Tab
           if (!searchFocused) {
             searchField.focus();
             if (searchField.value) {
@@ -677,7 +672,7 @@ angular.module('myApp.directives', ['myApp.filters'])
       };
 
       function onKeyDown(e) {
-        if (e.keyCode == 9 && !e.shiftKey && !$modalStack.getTop()) { // TAB
+        if (e.keyCode == 9 && !e.shiftKey && !e.ctrlKey && !e.metaKey && !$modalStack.getTop()) { // TAB
           editorElement.focus();
           return cancelEvent(e);
         }

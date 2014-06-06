@@ -10,7 +10,7 @@
       <span ng-switch-when="HISTORY_FLUSH">您确定要这样做吗？此操作将无法撤销。</span>
       <span ng-switch-when="TERMINATE_SESSIONS">您确定要只保留此会话并将其他设备上的会话都登出吗？</span>
       <span ng-switch-when="HTTPS_MIXED_FAIL">
-        您的浏览器并未支持 MTProto 协议的混合连接功能，无法使用 HTTPS 加密模式。<a href="https://github.com/zhukov/webogram/issues/237" target="_blank">了解更多 &raquo;</a><br/><br/>
+        您的浏览器 <a href="http://mzl.la/13jCUSU" target="_blank">并未支持</a> MTProto 协议的混合连接功能，无法使用 HTTPS 加密模式。 <a href="https://github.com/zhukov/webogram/issues/237" target="_blank">了解更多 &raquo;</a><br/><br/>
         您是否愿意使用 HTTP 模式作为替代？
       </span>
 
@@ -42,7 +42,7 @@
     <a class="btn btn-link" ng-click="$dismiss()" ng-switch="type">
       <span ng-switch-default>取消</span>
     </a>
-    <button type="button" class="btn btn-primary" ng-switch="type" ng-click="$close()">
+    <button type="button" class="btn btn-primary" ng-switch="type" ng-click="$close()" my-focused>
       <span ng-switch-when="LOGOUT">登出</span>
       <span ng-switch-when="HISTORY_FLUSH">删除聊天记录</span>
       <span ng-switch-when="FILES_CLIPBOARD_PASTE">发送</span>

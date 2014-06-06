@@ -46,6 +46,9 @@
         很抱歉，<strong>Telegram</strong> 没有查询到 {{phone | phoneNumber}} 的账户信息。<br/><br/>
         请使用官方的 <a href="https://telegram.org/" target="_blank">iOS</a> 或 <a href="https://telegram.org/" target="_blank">安卓</a> 客户端进行 <strong>注册</strong> 。
       </span>
+      <span ng-switch-when="USER_NOT_USING_TELEGRAM">
+        Sorry, there is no <strong>Telegram</strong> account with the phone number you provided.
+      </span>
 
 
       <div ng-switch-default ng-switch="error.code">
