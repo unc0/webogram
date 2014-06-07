@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.1.4 - messaging web application for MTProto
+ * Webogram v0.1.5 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -130,7 +130,7 @@ angular.module('myApp.services', [])
   };
 })
 
-.service('AppUsersManager', function ($rootScope, $modal, $modalStack, $filter, MtpApiFileManager, MtpApiManager, RichTextProcessor, SearchIndexManager) {
+.service('AppUsersManager', function ($rootScope, $modal, $modalStack, $filter, $q, MtpApiFileManager, MtpApiManager, RichTextProcessor, SearchIndexManager) {
   var users = {},
       cachedPhotoLocations = {},
       contactsFillPromise,
@@ -341,6 +341,22 @@ angular.module('myApp.services', [])
     }
   }
 
+  function openImportContact () {
+    return $modal.open({
+      templateUrl: 'partials/import_contact_modal.html',
+      controller: 'ImportContactModalController',
+      windowClass: 'import_contact_modal_window'
+    }).result.then(function (foundUserID) {
+      if (!foundUserID) {
+        ErrorService.show({
+          error: {code: 404, type: 'USER_NOT_USING_TELEGRAM'}
+        });
+        return $q.reject();
+      }
+      return foundUserID;
+    });
+  };
+
 
   $rootScope.$on('apiUpdate', function (e, update) {
     // console.log('on apiUpdate', update);
@@ -388,7 +404,8 @@ angular.module('myApp.services', [])
     importContact: importContact,
     deleteContacts: deleteContacts,
     wrapForFull: wrapForFull,
-    openUser: openUser
+    openUser: openUser,
+    openImportContact: openImportContact
   }
 })
 
@@ -2541,6 +2558,7 @@ angular.module('myApp.services', [])
         switch (action) {
           case 1:
             window.open(url, '_blank');
+            break;
 
           default:
             var a = $('<a>Download</a>')

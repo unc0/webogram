@@ -13,9 +13,9 @@
             <span class="icon-bar"></span>
           </a>
           <ul class="dropdown-menu">
-            <li><a href="" ng-click="openGroup()">创建新组</a></li>
-            <li><a href="" ng-click="openContacts()">联系人</a></li>
-            <li><a href="" ng-click="openSettings()">设置</a></li>
+            <li><a ng-click="openGroup()">创建新组</a></li>
+            <li><a ng-click="openContacts()">联系人</a></li>
+            <li><a ng-click="openSettings()">设置</a></li>
           </ul>
         </div>
         <div class="im_dialogs_search">
@@ -26,11 +26,19 @@
       <div my-dialogs-list class="im_dialogs_col">
         <div class="im_dialogs_wrap nano">
           <div class="im_dialogs_scrollable_wrap content">
+
+            <div class="im_dialogs_empty_wrap" ng-if="isEmpty.contacts">
+              <h3 class="im_dialogs_empty_header">尚未添加联系人</h3>
+              <p class="im_dialogs_empty_lead">开始添加您的联系人吧</p>
+              <button type="button" class="btn btn-primary btn-sm" ng-click="importContact()">添加联系人</button>
+            </div>
+
             <ul class="nav nav-pills nav-stacked">
               <li class="im_dialog_wrap" my-dialog dialog-message="dialogMessage" ng-repeat="dialogMessage in dialogs track by dialogMessage.peerID" ng-class="{active: curDialog.peerID == dialogMessage.peerID}"></li>
             </ul>
+
             <div class="im_dialogs_contacts_wrap" ng-show="contacts.length > 0">
-              <h5>Contacts</h5>
+              <h5>联系人</h5>
               <ul class="nav nav-pills nav-stacked">
                 <li class="im_dialog_wrap" ng-repeat="contact in contacts | orderBy:'user.sortName' track by contact.userID" ng-class="{active: curDialog.peerID == contact.userID}">
                   <a class="im_dialog" ng-click="dialogSelect(contact.peerString)">
@@ -53,14 +61,22 @@
                 </li>
               </ul>
             </div>
+
           </div>
         </div>
       </div>
     </div>
 
     <div class="im_history_col_wrap" ng-controller="AppImHistoryController">
-      <div ng-show="state.notSelected" class="im_history_not_selected" my-vertical-position="0.35">
-        没有相应的历史记录，您可以从左侧选择一个会话。
+      <div ng-show="state.notSelected" ng-switch="isEmpty.contacts &amp;&amp; isEmpty.dialogs">
+        <div ng-switch-when="true" class="im_history_no_dialogs_wrap">
+          <h3 class="im_dialogs_empty_header">入门参考</h3>
+          <p class="im_dialogs_empty_lead">欢迎使用 Telegram Web，您随时可以设置您的头像以及您的姓名。</p>
+          <button type="button" class="btn btn-primary btn-sm" ng-click="openSettings()">打开设置界面</button>
+        </div>
+        <div ng-switch-default class="im_history_not_selected" my-vertical-position="0.35">
+          请选择一个聊天会话开始发信息吧
+        </div>
       </div>
       <div ng-show="!state.notSelected &amp;&amp; !state.loaded" class="im_history_not_selected" my-vertical-position="0.35">
         正在读取历史记录<span my-loading-dots></span>
@@ -194,12 +210,12 @@
                     <textarea ng-model="draftMessage.text" placeholder="输入信息…" class="form-control im_message_field"></textarea>
 
                     <div class="im_media_attach pull-right">
-                      <input type="file" class="im_media_attach_input" size="28" multiple="true" accept="image/*, video/*, audio/*" title="Send media"/>
+                      <input type="file" class="im_media_attach_input" size="28" multiple="true" accept="image/*, video/*, audio/*" title="发送多媒体"/>
                       <i class="icon icon-camera"></i>
                     </div>
 
                     <div class="im_attach pull-right">
-                      <input type="file" class="im_attach_input" size="28" multiple="true" title="Send file" />
+                      <input type="file" class="im_attach_input" size="28" multiple="true" title="发送文件" />
                       <i class="icon icon-paperclip"></i>
                     </div>
 
