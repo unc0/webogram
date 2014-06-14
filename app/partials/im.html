@@ -4,7 +4,7 @@
 
   <div class="im_page_split clearfix">
 
-    <div class="im_dialogs_col_wrap" ng-controller="AppImDialogsController" my-dialogs>
+    <div class="im_dialogs_col_wrap" ng-controller="AppImDialogsController" my-dialogs has-tabs="{{search.query.length > 0}}">
       <div class="im_dialogs_panel">
         <div class="dropdown im_dialogs_panel_dropdown pull-right">
           <a class="dropdown-toggle">
@@ -13,7 +13,8 @@
             <span class="icon-bar"></span>
           </a>
           <ul class="dropdown-menu">
-            <li><a ng-click="openGroup()">创建新组</a></li>
+            <li><a ng-click="openGroup()">创建组</a></li>
+            <li><a ng-click="importContact()">创建联系人</a></li>
             <li><a ng-click="openContacts()">联系人</a></li>
             <li><a ng-click="openSettings()">设置</a></li>
           </ul>
@@ -22,7 +23,15 @@
           <input class="form-control im_dialogs_search_field" type="search" placeholder="搜索" ng-model="search.query"/>
           <a class="im_dialogs_search_clear" ng-click="search.query = ''" ng-show="search.query.length"></a>
         </div>
+
+        <div class="im_dialogs_tabs_wrap">
+          <div class="im_dialogs_tabs clearfix">
+            <a href="" class="im_dialogs_tab" ng-class="{active: !search.messages}" ng-click="search.messages = false">会话</a>
+            <a href="" class="im_dialogs_tab" ng-class="{active: search.messages}" ng-click="search.messages = true">聊天记录</a>
+          </div>
+        </div>
       </div>
+
       <div my-dialogs-list class="im_dialogs_col">
         <div class="im_dialogs_wrap nano">
           <div class="im_dialogs_scrollable_wrap content">
@@ -31,11 +40,17 @@
               <h3 class="im_dialogs_empty_header">尚未添加联系人</h3>
               <p class="im_dialogs_empty_lead">开始添加您的联系人吧</p>
               <button type="button" class="btn btn-primary btn-sm" ng-click="importContact()">添加联系人</button>
+              <button ng-if="phonebookAvailable" type="button" class="btn btn-primary btn-sm im_dialogs_import_phonebook" ng-click="importPhonebook()">导入号码簿</button>
             </div>
 
-            <ul class="nav nav-pills nav-stacked">
-              <li class="im_dialog_wrap" my-dialog dialog-message="dialogMessage" ng-repeat="dialogMessage in dialogs track by dialogMessage.peerID" ng-class="{active: curDialog.peerID == dialogMessage.peerID}"></li>
-            </ul>
+            <div ng-switch="search.messages">
+              <ul ng-switch-when="true" class="nav nav-pills nav-stacked">
+                <li class="im_dialog_wrap" my-dialog dialog-message="dialogMessage" ng-repeat="dialogMessage in dialogs track by dialogMessage.id" ng-class="{active: curDialog.peerID == dialogMessage.peerID &amp;&amp; curDialog.messageID == dialogMessage.id}"></li>
+              </ul>
+              <ul ng-switch-default class="nav nav-pills nav-stacked">
+                <li class="im_dialog_wrap" my-dialog dialog-message="dialogMessage" ng-repeat="dialogMessage in dialogs track by dialogMessage.peerID" ng-class="{active: curDialog.peerID == dialogMessage.peerID}"></li>
+              </ul>
+            </div>
 
             <div class="im_dialogs_contacts_wrap" ng-show="contacts.length > 0">
               <h5>联系人</h5>
@@ -102,8 +117,9 @@
                     <li><a ng-click="toggleMedia('audio')">语音信息</a></li>
                   </ul>
                 </div>
-                <a ng-show="mediaType !== false" class="im_history_panel_return_link pull-right" ng-click="toggleMedia()">
-                  返回群聊天
+                <a ng-show="mediaType !== false || skippedHistory" class="im_history_panel_return_link pull-right" ng-click="returnToRecent()" ng-switch="skippedHistory">
+                  <span ng-switch-when="true">显示最近聊天记录</span>
+                  <span ng-switch-default>显示所有聊天记录</span>
                   <strong class="im_history_panel_return_count" ng-show="missedCount > 0" ng-bind="'+' + missedCount"></strong>
                 </a>
 

@@ -19,10 +19,10 @@
 
     <div ng-if="error" class="error_modal_description" ng-switch="error.type">
       <span ng-switch-when="NETWORK_BAD_REQUEST">
-        Please check your internet connection.
+        请检查您的互联网连接设置。
       </span>
       <span ng-switch-when="NETWORK_BAD_RESPONSE">
-        Please check your internet connection.
+        请检查您的互联网连接设置。
       </span>
       <span ng-switch-when="FIRSTNAME_INVALID">
         名字包含非法字符。
@@ -40,14 +40,17 @@
         图片的尺寸有误，请选择其他图片。
       </span>
       <span ng-switch-when="PHOTO_CROP_SIZE_SMALL">
-        The photo you provided is too small.
+        您提供的头像太小，无法裁剪。
       </span>
       <span ng-switch-when="ACCOUNT_REQUIRED">
-        很抱歉，<strong>Telegram</strong> 没有查询到 {{phone | phoneNumber}} 的账户信息。<br/><br/>
+        很抱歉，<strong>Telegram</strong> 没有查询到 {{phone | phoneNumber}} 的账号信息。<br/><br/>
         请使用官方的 <a href="https://telegram.org/" target="_blank">iOS</a> 或 <a href="https://telegram.org/" target="_blank">安卓</a> 客户端进行 <strong>注册</strong> 。
       </span>
       <span ng-switch-when="USER_NOT_USING_TELEGRAM">
-        Sorry, there is no <strong>Telegram</strong> account with the phone number you provided.
+        很抱歉，您提供的电话号码并未注册 <strong>Telegram</strong> 账号。
+      </span>
+      <span ng-switch-when="USERS_NOT_USING_TELEGRAM">
+        很抱歉，您提供的电话号码并未注册 <strong>Telegram</strong> 账号。
       </span>
 
 

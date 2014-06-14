@@ -49,8 +49,8 @@
   </form>
 
   <form name="myFullNameForm" ng-if="credentials.phone_code_valid &amp;&amp; credentials.phone_unoccupied" ng-submit="logIn(true)">
-    <h3 class="login_form_head">您的账户信息</h3>
-    <p class="login_form_lead">注册 Telegram 账户需要您输入您的完整姓名。</p>
+    <h3 class="login_form_head">您的账号信息</h3>
+    <p class="login_form_lead">注册 Telegram 账号需要您输入您的完整姓名。</p>
 
     <div class="form-group login_first_name_wrap" ng-class="{'has-error': error.field == 'first_name'}">
       <label class="control-label" for="first_name" ng-if="error.field == 'first_name'">名字包含非法字符</label>
