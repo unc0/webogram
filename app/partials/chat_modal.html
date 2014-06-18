@@ -22,42 +22,39 @@
           </ng-pluralize>
         </p>
 
-        <div class="chat_modal_settings_wrap">
+        <div class="chat_modal_actions_wrap clearfix">
 
-          <div class="chat_modal_actions_wrap clearfix">
+          <button ng-if="!chatFull.chat.left &amp;&amp; chatFull.participants.participants.length" class="btn btn-primary chat_modal_invite_btn" ng-click="inviteToGroup()">添加成员</button>
+          <button ng-if="chatFull.chat._ != 'chatForbidden' &amp;&amp; chatFull.chat.left" class="btn btn-primary chat_modal_main_btn" ng-click="returnToGroup()">返回群聊天</button>
+          <button ng-if="chatFull.chat._ == 'chatForbidden'" class="btn btn-danger chat_modal_delete_btn" ng-click="flushHistory()">删除群聊天记录</button>
 
-            <button ng-if="!chatFull.chat.left &amp;&amp; chatFull.participants.participants.length" class="btn btn-primary chat_modal_invite_btn" ng-click="inviteToGroup()">添加成员</button>
-            <button ng-if="chatFull.chat._ != 'chatForbidden' &amp;&amp; chatFull.chat.left" class="btn btn-primary chat_modal_main_btn" ng-click="returnToGroup()">返回群聊天</button>
-            <button ng-if="chatFull.chat._ == 'chatForbidden'" class="btn btn-danger chat_modal_delete_btn" ng-click="flushHistory()">删除群聊天记录</button>
-
-            <span ng-if="chatFull.chat._ != 'chatForbidden' &amp;&amp; !chatFull.chat.left &amp;&amp; !photo.updating" class="btn btn-primary chat_modal_main_btn" >
-              <input my-file-upload  type="file" multiple="false" class="im_attach_input" size="120" multiple="false" accept="image/x-png, image/png, image/gif, image/jpeg" />
+          <span ng-if="chatFull.chat._ != 'chatForbidden' &amp;&amp; !chatFull.chat.left &amp;&amp; !photo.updating" class="btn btn-primary chat_modal_main_btn" >
+            <input my-file-upload  type="file" multiple="false" class="im_attach_input" size="120" multiple="false" accept="image/x-png, image/png, image/gif, image/jpeg" />
               更新群图片
-            </span>
-            <span ng-if="photo.updating" class="btn btn-primary chat_modal_main_btn disabled" disabled>
+          </span>
+          <span ng-if="photo.updating" class="btn btn-primary chat_modal_main_btn disabled" disabled>
               正在更新<span my-loading-dots></span>
-            </span>
+          </span>
 
 
-            <div class="dropdown chat_modal_other_btn" ng-if="chatFull.chat._ != 'chatForbidden' &amp;&amp; !chatFull.chat.left">
-              <button class="btn btn-link dropdown-toggle">更多<i class="icon icon-caret"></i></button>
-              <ul class="dropdown-menu">
-                <li ng-if="chatFull.thumb.location">
-                  <a ng-click="deletePhoto()">删除群图片</a>
-                </li>
-                <li>
-                  <a ng-click="editTitle()">编辑群</a>
-                </li>
-                <li>
-                  <a ng-click="leaveGroup()">离开群</a>
-                </li>
-                <li>
-                  <a ng-click="flushHistory()">删除群聊天记录</a>
-                </li>
-              </ul>
-            </div>
-
+          <div class="dropdown chat_modal_other_btn" ng-if="chatFull.chat._ != 'chatForbidden' &amp;&amp; !chatFull.chat.left">
+            <button class="btn btn-link dropdown-toggle">更多<i class="icon icon-caret"></i></button>
+            <ul class="dropdown-menu">
+              <li ng-if="chatFull.thumb.location">
+                <a ng-click="deletePhoto()">删除群图片</a>
+              </li>
+              <li>
+                <a ng-click="editTitle()">编辑群</a>
+              </li>
+              <li>
+                <a ng-click="leaveGroup()">离开群</a>
+              </li>
+              <li>
+                <a ng-click="flushHistory()">删除群聊天记录</a>
+              </li>
+            </ul>
           </div>
+
         </div>
 
       </div>

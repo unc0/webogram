@@ -1,4 +1,4 @@
-<div ng-include="'partials/head.html'"></div>
+<div my-head></div>
 
 <div class="im_page_wrap" ng-class="{im_page_peer_not_selected: !curDialog.peer}">
 
@@ -89,11 +89,11 @@
           <p class="im_dialogs_empty_lead">欢迎使用 Telegram Web，您随时可以设置您的头像以及您的姓名。</p>
           <button type="button" class="btn btn-primary btn-sm" ng-click="openSettings()">打开设置界面</button>
         </div>
-        <div ng-switch-default class="im_history_not_selected" my-vertical-position="0.35">
+        <div ng-switch-default class="im_history_not_selected" my-vertical-position="0.35" padding="true">
           请选择一个聊天会话开始发信息吧
         </div>
       </div>
-      <div ng-show="!state.notSelected &amp;&amp; !state.loaded" class="im_history_not_selected" my-vertical-position="0.35">
+      <div ng-show="!state.notSelected &amp;&amp; !state.loaded" class="im_history_not_selected" my-vertical-position="0.35" padding="true">
         正在读取历史记录<span my-loading-dots></span>
       </div>
 
@@ -117,13 +117,13 @@
                     <li><a ng-click="toggleMedia('audio')">语音信息</a></li>
                   </ul>
                 </div>
-                <a ng-show="mediaType !== false || skippedHistory" class="im_history_panel_return_link pull-right" ng-click="returnToRecent()" ng-switch="skippedHistory">
+                <a ng-show="historyFilter.mediaType.length || skippedHistory" class="im_history_panel_return_link pull-right" ng-click="returnToRecent()" ng-switch="skippedHistory">
                   <span ng-switch-when="true">显示最近聊天记录</span>
                   <span ng-switch-default>显示所有聊天记录</span>
                   <strong class="im_history_panel_return_count" ng-show="missedCount > 0" ng-bind="'+' + missedCount"></strong>
                 </a>
 
-                <div ng-switch="mediaType">
+                <div ng-switch="historyFilter.mediaType">
                   <h4 ng-switch-when="photos">图片</h4>
                   <h4 ng-switch-when="video">视频</h4>
                   <h4 ng-switch-when="documents">文档</h4>
@@ -138,7 +138,7 @@
                       <span ng-bind-html="historyPeer.data.rTitle"></span>
                       <small class="im_chat_users">
                         <ng-pluralize count="historyPeer.data.participants_count"
-                                         when="{'0': '群里没有人', 'one': '群里只有一个人', 'other': '群里有 {} 人'}">
+                                         when="{'0': '没有成员', 'one': '1 位成员', 'other': '{} 位成员'}">
                         </ng-pluralize>
                       </small>
                     </div>
@@ -157,13 +157,9 @@
 
               <div class="im_history_scrollable">
                   <div class="im_history" ng-class="{im_history_selectable: selectActions}">
-                    <div ng-if="!history.length"  class="im_history_empty" ng-switch="state.mayBeHasMore">
-                      <div my-vertical-position="0.25" ng-switch-when="true">
-                        正在获取相关历史记录<span my-loading-dots></span>
-                      </div>
-                      <div my-vertical-position="0.25" ng-switch-default>
-                        未查到相关历史记录…
-                      </div>
+                    <div ng-if="!history.length"  class="im_history_empty" ng-switch="state.mayBeHasMore" my-vertical-position="0.25" padding="true">
+                      <span ng-switch-when="true">正在获取相关历史记录<span my-loading-dots></span></span>
+                      <span ng-switch-default>未查到相关历史记录…</span>
                     </div>
 
                     <div class="im_history_messages">
@@ -172,7 +168,7 @@
                   </div>
 
                   <div class="im_history_typing_wrap">
-                    <div class="im_history_typing" ng-show="typing.user &amp;&amp; !mediaType">
+                    <div class="im_history_typing" ng-show="typing.user &amp;&amp; !historyFilter.mediaType">
                       <strong class="im_history_typing_author" ng-bind-html="typing.user.rFullName"></strong> 正在输入<span my-loading-dots></span>
                     </div>
                   </div>

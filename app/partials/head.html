@@ -1,19 +1,80 @@
 <div class="tg_page_head">
-  <div class="navbar navbar-static-top  navbar-inverse" role="navigation">
+  <div class="navbar navbar-static-top  navbar-inverse" role="navigation" ng-class="{navbar_peer_not_selected: !curDialog.peer, navbar_offline: offline}">
     <div class="container">
-      <div class="navbar-header">
-        <a class="navbar-brand" href="{{isLoggedIn ? '#/im' : '#/'}}"><span class="tg_head_logo"></span><span class="tg_head_logo_text"></span></a>
-        <ul class="nav navbar-nav navbar-quick-nav" ng-show="curDialog.peer">
-          <li>
-            <a href="#/im">
-              <i class="icon icon-back"></i> 后退
-            </a>
-          </li>
+
+      <div class="navbar-toggle-wrap dropdown">
+        <a class="dropdown-toggle navbar-toggle">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </a>
+        <ul ng-if="!curDialog.peer &amp;&amp; isLoggedIn" class="dropdown-menu">
+          <li><a ng-click="openGroup()">新建群</a></li>
+          <li><a ng-click="importContact()">新建联系人</a></li>
+          <li><a ng-click="openContacts()">联系人</a></li>
+          <li><a ng-click="openSettings()">设置</a></li>
+          <li><a ng-click="logOut()">登出</a></li>
+        </ul>
+        <ul ng-if="curDialog.peer &amp;&amp; isLoggedIn" class="dropdown-menu">
+          <li><a ng-click="showPeerInfo()" ng-switch="historyPeer.id > 0">
+            <span ng-switch-when="true">个人信息</span>
+            <span ng-switch-default>群信息</span>
+          </a></li>
+          <li><a ng-click="toggleEdit()">编辑历史记录（本地）</a></li>
+          <li ng-if="!historyFilter.mediaType" class="divider"></li>
+          <li ng-if="!historyFilter.mediaType" class="dropdown-header">媒体文件</li>
+          <li ng-if="!historyFilter.mediaType"><a ng-click="toggleMedia('photos')">图片</a></li>
+          <li ng-if="!historyFilter.mediaType"><a ng-click="toggleMedia('video')">视频</a></li>
+          <li ng-if="!historyFilter.mediaType"><a ng-click="toggleMedia('documents')">文档</a></li>
+          <li ng-if="!historyFilter.mediaType"><a ng-click="toggleMedia('audio')">语音信息</a></li>
+        </ul>
+        <ul ng-if="!isLoggedIn" class="dropdown-menu">
+          <li><a href="" ng-click="openAbout()">关于</a></li>
+					<li><a href="" ng-click="hideWindow()">_</a></li>
+					<li><a href="" ng-click="closeWindow()">x</a></li>
         </ul>
       </div>
 
+      <div class="navbar-header">
 
-      <div class="navbar-collapse collapse" ng-switch="offline">
+        <a class="navbar-brand" href="{{isLoggedIn ? '#/im' : '#/'}}"><span class="tg_head_logo"></span><span class="tg_head_logo_text"></span></a>
+
+        <div ng-show="curDialog.peer" ng-switch="curDialog.peer &amp;&amp; historyFilter.mediaType.length">
+          <ul ng-switch-when="true" class="nav navbar-nav navbar-quick-nav">
+            <li>
+              <a ng-click="toggleMedia()" class="navbar-quick-media-back" ng-switch="historyFilter.mediaType">
+                <i class="icon icon-back"></i>
+                <h4 ng-switch-when="photos">图片</h4>
+                <h4 ng-switch-when="video">视频</h4>
+                <h4 ng-switch-when="documents">文档</h4>
+                <h4 ng-switch-when="audio">语音信息</h4>
+              </a>
+            </li>
+          </ul>
+          <ul ng-switch-default class="nav navbar-nav navbar-quick-nav" ng-switch="historyPeer.id > 0">
+            <li ng-switch-when="true">
+              <a href="#/im" class="navbar-quick-profile-back">
+                <i class="icon icon-back"></i>
+                <h4 ng-bind-html="historyPeer.data.rFullName"></h4>
+                <small ng-bind="historyPeer.data | userStatus"></small>
+              </a>
+            </li>
+            <li ng-switch-default>
+              <a href="#/im" class="navbar-quick-group-back">
+                <i class="icon icon-back"></i>
+                <h4 ng-bind-html="historyPeer.data.rTitle"></h4>
+                <small>
+                  <ng-pluralize count="historyPeer.data.participants_count"
+                                   when="{'0': '没有成员', 'one': '1 位成员', 'other': '{} 位成员'}">
+                  </ng-pluralize>
+                </small>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="navbar-menu" ng-switch="offline">
 
         <ul ng-switch-when="true" class="nav navbar-nav navbar-offline">
           <li ng-show="!offlineConnecting"><span class="navbar-offline-text">离线状态，请连接互联网<span my-loading-dots></span></span></li>
@@ -31,6 +92,7 @@
         </ul>
 
       </div>
+
     </div>
   </div>
 </div>

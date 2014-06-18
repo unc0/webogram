@@ -1,6 +1,10 @@
 <div class="contacts_modal_wrap" my-modal-position>
 
+  <a class="modal-close-button visible-xs" ng-click="$dismiss()"><i></i></a>
+
   <div class="modal-body">
+
+    <h4 class="modal_simple_header visible-xs">联系人</h4>
 
     <div class="contacts_modal_search">
       <input class="form-control contacts_modal_search_field" my-focused type="search" placeholder="搜索联系人" ng-model="search.query"/>
@@ -44,9 +48,9 @@
 
   </div>
 
-  <div class="modal-footer" ng-switch="multiSelect">
+  <div class="modal-footer contacts_modal_panel" ng-switch="multiSelect">
     <button ng-switch-when="true" class="btn btn-success btn-block" ng-class="{disabled: !selectedCount}" ng-disabled="!selectedCount" ng-click="submitSelected()" type="submit">
-      下一个 »
+      继续 »
     </button>
     <div ng-switch-default>
       <a class="btn btn-link pull-left" ng-click="importContact()">添加联系人</a>

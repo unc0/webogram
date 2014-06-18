@@ -25,7 +25,7 @@
   <div class="modal-footer">
     <a class="btn btn-link pull-left" ng-if="phonebookAvailable" ng-click="importPhonebook()">导入号码簿</a>
     <a class="btn btn-link" ng-click="$dismiss()">取消</a>
-    <button class="btn btn-primary" ng-class="{disabled: progress.enabled}" ng-click="doImport()" ng-bind="progress.enabled ? 'Importing...' : 'Save'" ng-disabled="progress.enabled"></button>
+    <button class="btn btn-primary" ng-class="{disabled: progress.enabled}" ng-click="doImport()" ng-bind="progress.enabled ? '正在导入…' : '保存'" ng-disabled="progress.enabled"></button>
   </div>
 
 </div>

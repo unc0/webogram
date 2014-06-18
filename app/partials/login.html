@@ -1,4 +1,4 @@
-<div ng-include="'partials/head.html'"></div>
+<div my-head></div>
 
 
 <div class="login_form_wrap" my-vertical-position="0.4">
@@ -39,7 +39,7 @@
 
     <div class="form-group" ng-class="{'has-error': error.field == 'phone_code'}">
       <label class="control-label" for="phone_code" ng-if="error.field == 'phone_code'">很抱歉，您输入的短信验证码有误，请检查。</label>
-      <input type="number" my-focused maxlength="5" class="form-control" name="phone_code" ng-model="credentials.phone_code" placeholder="Enter your code" autocomplete="off" required>
+      <input type="number" my-focused maxlength="5" class="form-control" name="phone_code" ng-model="credentials.phone_code" placeholder="输入验证码" autocomplete="off" required>
     </div>
 
     <button class="btn btn-primary btn-block" type="submit" ng-class="{disabled: progress.enabled}" ng-disabled="progress.enabled" ng-switch="progress.enabled">

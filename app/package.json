@@ -2,7 +2,7 @@
   "main": "index.html",
   "name": "Webogram",
   "description": "一个非官方的 Telegram 客户端",
-  "version": "0.1.0",
+  "version": "0.1.6",
   "keywords": [ "telegram", "node-webkit" ],
   "window": {
     "title": "Webogram",
