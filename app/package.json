@@ -9,12 +9,10 @@
     "icon": "img/Tlogo_2x.png",
     "toolbar": false,
     "frame": false,
-    "width": 600,
-    "height": 600,
+    "width": 800,
+    "height": 650,
     "position": "center",
-    "min_width": 200,
-    "min_height": 300,
-    "max_width": 1920,
-    "max_height": 1080
+    "min_width": 300,
+    "min_height": 300
   }
 }

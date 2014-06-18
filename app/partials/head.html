@@ -14,6 +14,8 @@
           <li><a ng-click="openContacts()">联系人</a></li>
           <li><a ng-click="openSettings()">设置</a></li>
           <li><a ng-click="logOut()">登出</a></li>
+					<li><a href="" ng-click="hideWindow()">最小化</a></li>
+					<li><a href="" ng-click="closeWindow()">关闭</a></li>
         </ul>
         <ul ng-if="curDialog.peer &amp;&amp; isLoggedIn" class="dropdown-menu">
           <li><a ng-click="showPeerInfo()" ng-switch="historyPeer.id > 0">
@@ -30,8 +32,6 @@
         </ul>
         <ul ng-if="!isLoggedIn" class="dropdown-menu">
           <li><a href="" ng-click="openAbout()">关于</a></li>
-					<li><a href="" ng-click="hideWindow()">_</a></li>
-					<li><a href="" ng-click="closeWindow()">x</a></li>
         </ul>
       </div>
 

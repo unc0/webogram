@@ -18,6 +18,7 @@ html {
   margin: 5px;
 }
 .navbar-toggle-wrap .navbar-toggle {
+  -webkit-app-region: no-drag;
   float: none;
   display: block;
   margin: 0;
