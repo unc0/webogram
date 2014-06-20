@@ -1427,9 +1427,9 @@ angular.module('myApp.services', [])
     } else if (file.type.substr(0, 6) == 'video/') {
       attachType = 'video';
       fileName = 'video.mp4';
-    } else if (file.type == 'audio/mpeg' || file.type == 'audio/mp3') {
+    } else if (file.type.substr(0, 6) == 'audio/') {
       attachType = 'audio';
-      fileName = 'audio.mp3';
+      fileName = 'audio.' + file.type.split('/')[1] || 'mp3';
     } else {
       attachType = 'document';
       fileName = 'document.' + file.type.split('/')[1];
@@ -1497,11 +1497,11 @@ angular.module('myApp.services', [])
                 break;
 
               case 'video':
-                inputMedia = {_: 'inputMediaUploadedVideo', file: inputFile, duration: 0, w: 0, h: 0};
+                inputMedia = {_: 'inputMediaUploadedVideo', file: inputFile, duration: 0, w: 0, h: 0, mime_type: file.type};
                 break;
 
               case 'audio':
-                inputMedia = {_: 'inputMediaUploadedAudio', file: inputFile, duration: 0};
+                inputMedia = {_: 'inputMediaUploadedAudio', file: inputFile, duration: 0, mime_type: file.type};
                 break;
 
               case 'document':
@@ -1832,6 +1832,7 @@ angular.module('myApp.services', [])
 
     if (message._ == 'messageForwarded') {
       message.fwdUser = AppUsersManager.getUser(message.fwd_from_id);
+      message.fwdPhoto = AppUsersManager.getUserPhoto(message.fwd_from_id, 'User');
     }
 
     if (message.media) {
@@ -3108,7 +3109,7 @@ angular.module('myApp.services', [])
     emojiMap[emojiData[emojiCode][0]] = emojiCode;
   }
 
-  var regExp = new RegExp('((?:(ftp|https?)://|(?:mailto:)?([A-Za-z0-9._%+-]+@))(\\S*\\.\\S*[^\\s.;,(){}<>"\']))|(\\n)|(' + emojiUtf.join('|') + ')', 'i');
+  var regExp = new RegExp('((?:(ftp|https?)://|(?:mailto:)?([A-Za-z0-9._%+-]+@))(\\S*\\.\\S*[^\\s.;,(){}<>"\']))|(\\n)|(' + emojiUtf.join('|') + ')|(^|\s)(#[A-Za-z0-9\_\.]{4,20})', 'i');
   var youtubeRegex = /(?:https?:\/\/)?(?:www\.)?youtu(?:|.be|be.com|.b)(?:\/v\/|\/watch\\?v=|e\/|\/watch(?:.+)v=)(.{11})(?:\&[^\s]*)?/;
 
   return {
@@ -3211,6 +3212,23 @@ angular.module('myApp.services', [])
           );
         } else {
           html.push(encodeEntities(match[6]));
+        }
+      }
+      else if (match[8]) {
+        if (!options.noLinks) {
+          html.push(
+            match[7],
+            '<a href="#/im?q=',
+            encodeURIComponent(match[8]),
+            '">',
+            encodeEntities(match[8]),
+            '</a>'
+          );
+        } else {
+          html.push(
+            match[7],
+            encodeEntities(match[8])
+          );
         }
       }
       raw = raw.substr(match.index + match[0].length);

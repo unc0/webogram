@@ -24,6 +24,7 @@
       <span ng-switch-when="true">正在生成密钥<span my-loading-dots></span></span>
       <span ng-switch-default>下一步</span>
     </button>
+    <div class="login_form_messaging" ng-show="progress.enabled">密钥只需要生成一次。在速度慢的设备上可能需要几分钟，请稍后。</div>
   </form>
 
   <form name="myLoginForm" ng-if="credentials.phone_code_hash &amp;&amp; !credentials.phone_code_valid" ng-submit="logIn()">

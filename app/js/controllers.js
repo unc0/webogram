@@ -230,6 +230,7 @@ angular.module('myApp.controllers', [])
 
     $scope.isLoggedIn = true;
     $scope.isEmpty = {};
+    $scope.search = {};
     $scope.historyFilter = {mediaType: false};
     $scope.historyPeer = {};
 
@@ -326,7 +327,19 @@ angular.module('myApp.controllers', [])
 
     updateCurDialog();
 
+    var lastSearch = false;
     function updateCurDialog() {
+      if ($routeParams.q) {
+        if ($routeParams.q !== lastSearch) {
+          $scope.search.query = lastSearch = $routeParams.q;
+          $scope.search.messages = true;
+          if ($scope.curDialog !== undefined) {
+            return false;
+          }
+        }
+      } else {
+        lastSearch = false;
+      }
       $scope.curDialog = {
         peer: $routeParams.p || false,
         messageID: $routeParams.m || false
@@ -336,11 +349,10 @@ angular.module('myApp.controllers', [])
     ChangelogNotifyService.checkUpdate();
   })
 
-  .controller('AppImDialogsController', function ($scope, $location, $q, $timeout, MtpApiManager, AppUsersManager, AppChatsManager, AppMessagesManager, AppPeersManager, PhonebookContactsService, ErrorService) {
+  .controller('AppImDialogsController', function ($scope, $location, $q, $timeout, $routeParams, MtpApiManager, AppUsersManager, AppChatsManager, AppMessagesManager, AppPeersManager, PhonebookContactsService, ErrorService) {
 
     $scope.dialogs = [];
     $scope.contacts = [];
-    $scope.search = {};
     $scope.contactsLoaded = false;
     $scope.phonebookAvailable = PhonebookContactsService.isAvailable();
 
@@ -404,7 +416,7 @@ angular.module('myApp.controllers', [])
     var prevMessages = false;
     $scope.$watchCollection('search', function () {
       if ($scope.search.messages && (!angular.isString($scope.search.query) || !$scope.search.query.length)) {
-        prevMessages = $scope.search.messages = false;
+        $scope.search.messages = false;
       }
       if ($scope.search.messages != prevMessages) {
         prevMessages = $scope.search.messages;
@@ -412,6 +424,19 @@ angular.module('myApp.controllers', [])
         loadDialogs(true);
       } else {
         loadDialogs();
+      }
+
+      if ($routeParams.q && (!$scope.search.messages || $scope.search.query != $routeParams.q)) {
+        $timeout(function () {
+          $location.url(
+            '/im' +
+            ($scope.curDialog.peer
+              ? '?p=' + $scope.curDialog.peer +
+                ($scope.curDialog.messageID ? '&m=' + $scope.curDialog.messageID : '')
+              : ''
+            )
+          );
+        });
       }
     });
 
@@ -705,7 +730,11 @@ angular.module('myApp.controllers', [])
             curMessage.date < prevMessage.date + 900) {
 
           var singleLine = curMessage.message && curMessage.message.length < 70 && curMessage.message.indexOf("\n") == -1;
-          curMessage.grouped = !curMessage.fwd_from_id && singleLine ? 1 : 2;
+          if (curMessage.fwd_from_id && curMessage.fwd_from_id == prevMessage.fwd_from_id) {
+            curMessage.grouped = singleLine ? 4 : 3;
+          } else {
+            curMessage.grouped = !curMessage.fwd_from_id && singleLine ? 1 : 2;
+          }
         } else if (prevMessage || !i) {
           delete curMessage.grouped;
         }

@@ -773,6 +773,12 @@ a.tg_radio_on:hover i.icon-radio {
   margin: 15px 0 30px;
   font-size: 13px;
 }
+.login_form_messaging {
+  text-align: center;
+  color: #959595;
+  font-size: 13px;
+  margin-top: 20px;
+}
 
 .login_country_selector {
   cursor: pointer;
@@ -886,13 +892,17 @@ a.tg_radio_on:hover i.icon-radio {
   background : rgba(0,0,0,0.0);
   width      : 12px;
   right: 0px;
-  -webkit-transition    : .2s;
-  -moz-transition       : .2s;
-  -o-transition         : .2s;
-  transition            : .2s;
   -moz-border-radius    : 0;
   -webkit-border-radius : 0;
   border-radius         : 0;
+  /*-webkit-transition    : .2s;
+  -moz-transition       : .2s;
+  -o-transition         : .2s;
+  transition            : .2s;*/
+  -webkit-transition    : none;
+  -moz-transition       : none;
+  -o-transition         : none;
+  transition            : none;
 }
 .im_dialogs_col .nano > .pane > .slider {
   background: #A5B1B9;
@@ -1143,13 +1153,18 @@ a.im_dialog_selected .im_dialog_date {
   width      : 9px;
   right: 0;
   top: 0;
-  -webkit-transition    : .2s;
+  /*-webkit-transition    : .2s;
   -moz-transition       : .2s;
   -o-transition         : .2s;
-  transition            : .2s;
+  transition            : .2s;*/
   -moz-border-radius    : 2px;
   -webkit-border-radius : 2px;
   border-radius         : 2px;
+
+  -webkit-transition    : none;
+  -moz-transition       : none;
+  -o-transition         : none;
+  transition            : none;
 }
 
 .contacts_modal_col .nano > .pane {
@@ -1377,21 +1392,29 @@ a.im_dialog_selected .im_dialog_date {
 
 
 
-.im_message_author {
+.im_message_author,
+.im_message_fwd_author {
   color: #3a6d99;
   font-weight: bold;
 }
-.non_osx .im_message_author {
+.non_osx .im_message_author,
+.non_osx .im_message_fwd_author {
   font-size: 12px;
 }
 .im_message_grouped1 .im_message_from_photo,
 .im_message_grouped1 .im_message_author,
 .im_message_grouped2 .im_message_from_photo,
-.im_message_grouped2 .im_message_author {
+.im_message_grouped2 .im_message_author,
+.im_message_grouped3 .im_message_author,
+.im_message_grouped3 .im_message_from_photo,
+.im_message_grouped4 .im_message_author,
+.im_message_grouped4 .im_message_from_photo {
   display: none;
 }
 .im_message_grouped1 .im_message_body,
-.im_message_grouped2 .im_message_body {
+.im_message_grouped2 .im_message_body,
+.im_message_grouped3 .im_message_body,
+.im_message_grouped4 .im_message_body {
   margin-left: 46px;
 }
 .im_message_grouped1 .im_content_message_select_area,
@@ -1401,15 +1424,38 @@ a.im_dialog_selected .im_dialog_date {
 .im_history_appending .im_content_message_select_area {
   height: 52px;
 }
-.im_message_grouped1 .icon-select-tick {
-  margin-top: 4px;
-}
-.im_message_grouped1 .icon-message-status {
+.im_message_grouped1 .icon-select-tick,
+.im_message_grouped4 .icon-select-tick {
   margin-top: 5px;
+}
+.im_message_grouped1 .icon-message-status,
+.im_message_grouped4 .icon-message-status {
+  margin-top: 5px;
+}
+.im_message_grouped3 .im_message_fwd_from,
+.im_message_grouped4 .im_message_fwd_from {
+  display: none;
+}
+
+.im_message_grouped1 .im_message_fwd .im_message_date,
+.im_message_grouped2 .im_message_fwd .im_message_date,
+.im_message_grouped3 .im_message_fwd .im_message_date,
+.im_message_grouped4 .im_message_fwd .im_message_date {
+  display: none;
+}
+
+.im_message_grouped3 .im_message_fwd,
+.im_message_grouped4 .im_message_fwd {
+  margin-top: 8px;
+}
+.im_message_grouped3 .im_message_fwd,
+.im_message_grouped4 .im_message_fwd {
+  margin-top: 8px;
 }
 
 .im_message_from_photo,
-.im_message_contact_photo {
+.im_message_contact_photo,
+.im_message_fwd_photo {
   width: 34px;
   height: 34px;
 
@@ -1810,7 +1856,8 @@ img.im_message_document_thumb {
   opacity: 1;
 }
 
-.im_message_date {
+.im_message_date,
+.im_message_fwd_date {
   color: #adadad;
   font-size: 0.85em;
   padding: 0 0 20px 10px;
@@ -1860,6 +1907,31 @@ div.im_message_body {
 
 div.im_message_fwd_header {
   color: #808080;
+}
+.im_message_fwd_from {
+  margin-top: 5px;
+}
+.im_message_grouped2 .im_message_fwd_from {
+  margin-top: 0;
+}
+.im_message_fwd {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+.im_message_fwd .im_message_fwd_author_wrap,
+.im_message_fwd .im_message_text,
+.im_message_fwd .im_message_media {
+  margin-left: 42px;
+}
+a.im_message_fwd_photo {
+  position: absolute;
+  margin-top: 1px;
+}
+.im_message_fwd_author {
+  margin-right: 5px;
+}
+.im_message_fwd_date {
+  padding: 0;
 }
 
 .im_message_text {
@@ -2025,6 +2097,9 @@ textarea.im_message_field {
   opacity: 1;
 }
 
+.im_head_attach {
+  display: none;
+}
 .im_attach_input,
 .im_media_attach_input {
   cursor: pointer;
@@ -3015,12 +3090,15 @@ a.contacts_modal_contact:hover .contacts_modal_contact_status {
 .im_message_selected .im_message_date,
 .im_message_selected .im_message_fwd_header,
 .im_message_selected .im_message_document_size,
+.im_message_selected .im_message_fwd_date,
 .im_message_focus .im_message_date,
 .im_message_focus .im_message_fwd_header,
 .im_message_focus .im_message_document_size,
+.im_message_focus .im_message_fwd_date,
 .im_history_selectable .im_message_outer_wrap:hover .im_message_date,
 .im_history_selectable .im_message_outer_wrap:hover .im_message_fwd_header,
-.im_history_selectable .im_message_outer_wrap:hover .im_message_document_size {
+.im_history_selectable .im_message_outer_wrap:hover .im_message_document_size,
+.im_history_selectable .im_message_outer_wrap:hover .im_message_fwd_date {
   color: #68839c;
 }
 
