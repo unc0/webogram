@@ -16,9 +16,10 @@ html {
   float: right;
   display: block;
   margin: 5px;
+  /* fix app-region drag */
+  -webkit-app-region: no-drag;
 }
 .navbar-toggle-wrap .navbar-toggle {
-  -webkit-app-region: no-drag;
   float: none;
   display: block;
   margin: 0;
@@ -33,11 +34,12 @@ html {
 }
 
 .tg_page_head .navbar-quick-nav {
-  display: block;
+  /* fix app-region drag */
+  display: inline-block;
   margin: 0;
 }
 .tg_page_head .navbar-quick-nav li {
-  float: left;
+  /* fix app-region drag */
 }
 .tg_page_head .navbar-quick-nav a {
   padding-top: 15px;
@@ -366,6 +368,8 @@ html {
   border-radius: 4px;
   padding: 3px 7px;
   border: 1px solid #497495;
+  /* fix app-region drag */
+  -webkit-app-region: no-drag;
 }
 .navbar_peer_not_selected .im_head_attach {
   display: none;
