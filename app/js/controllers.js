@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.1.6 - messaging web application for MTProto
+ * Webogram v0.1.7 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -354,6 +354,9 @@ angular.module('myApp.controllers', [])
     $scope.dialogs = [];
     $scope.contacts = [];
     $scope.contactsLoaded = false;
+    if ($scope.search === undefined) {
+      $scope.search = {};
+    }
     $scope.phonebookAvailable = PhonebookContactsService.isAvailable();
 
     var offset = 0,
@@ -1137,7 +1140,7 @@ angular.module('myApp.controllers', [])
     $scope.$on('user_update', angular.noop);
   })
 
-  .controller('AppImSendController', function ($scope, $timeout, MtpApiManager, AppConfigManager, AppPeersManager, AppMessagesManager, ApiUpdatesManager, MtpApiFileManager) {
+  .controller('AppImSendController', function ($scope, $timeout, MtpApiManager, Storage, AppPeersManager, AppMessagesManager, ApiUpdatesManager, MtpApiFileManager) {
 
     $scope.$watch('curDialog.peer', resetDraft);
     $scope.$on('user_update', angular.noop);
@@ -1192,7 +1195,7 @@ angular.module('myApp.controllers', [])
 
     function resetDraft (newPeer) {
       if (newPeer) {
-        AppConfigManager.get('draft' + $scope.curDialog.peerID).then(function (draftText) {
+        Storage.get('draft' + $scope.curDialog.peerID).then(function (draftText) {
           // console.log('Restore draft', 'draft' + $scope.curDialog.peerID, draftText);
           $scope.draftMessage.text = draftText || '';
           // console.log('send broadcast', $scope.draftMessage);
@@ -1216,10 +1219,10 @@ angular.module('myApp.controllers', [])
 
         var backupDraftObj = {};
         backupDraftObj['draft' + $scope.curDialog.peerID] = newVal;
-        AppConfigManager.set(backupDraftObj);
+        Storage.set(backupDraftObj);
         // console.log('draft save', backupDraftObj);
       } else {
-        AppConfigManager.remove('draft' + $scope.curDialog.peerID);
+        Storage.remove('draft' + $scope.curDialog.peerID);
         // console.log('draft delete', 'draft' + $scope.curDialog.peerID);
       }
     }
@@ -1792,7 +1795,7 @@ angular.module('myApp.controllers', [])
 
   })
 
-  .controller('SettingsModalController', function ($rootScope, $scope, $timeout, $modal, AppUsersManager, AppChatsManager, AppPhotosManager, MtpApiManager, AppConfigManager, NotificationsManager, MtpApiFileManager, ApiUpdatesManager, ChangelogNotifyService, ErrorService) {
+  .controller('SettingsModalController', function ($rootScope, $scope, $timeout, $modal, AppUsersManager, AppChatsManager, AppPhotosManager, MtpApiManager, Storage, NotificationsManager, MtpApiFileManager, ApiUpdatesManager, ChangelogNotifyService, ErrorService) {
 
     $scope.profile = {};
     $scope.photo = {};
@@ -1888,7 +1891,7 @@ angular.module('myApp.controllers', [])
       });
     };
 
-    AppConfigManager.get('notify_nodesktop', 'notify_nosound', 'send_ctrlenter', 'notify_volume').then(function (settings) {
+    Storage.get('notify_nodesktop', 'notify_nosound', 'send_ctrlenter', 'notify_volume').then(function (settings) {
       $scope.notify.desktop = !settings[0];
       $scope.send.enter = settings[2] ? '' : '1';
 
@@ -1916,8 +1919,8 @@ angular.module('myApp.controllers', [])
       $scope.$watch('notify.volume', function (newValue, oldValue) {
         if (newValue !== oldValue) {
           var storeVolume = newValue / 10;
-          AppConfigManager.set({notify_volume: storeVolume});
-          AppConfigManager.remove('notify_nosound');
+          Storage.set({notify_volume: storeVolume});
+          Storage.remove('notify_nosound');
           NotificationsManager.clear();
 
           if (testSoundPromise) {
@@ -1933,9 +1936,9 @@ angular.module('myApp.controllers', [])
         $scope.notify.desktop = !$scope.notify.desktop;
 
         if ($scope.notify.desktop) {
-          AppConfigManager.remove('notify_nodesktop');
+          Storage.remove('notify_nodesktop');
         } else {
-          AppConfigManager.set({notify_nodesktop: true});
+          Storage.set({notify_nodesktop: true});
         }
       }
 
@@ -1943,9 +1946,9 @@ angular.module('myApp.controllers', [])
         $scope.send.enter = newValue;
 
         if ($scope.send.enter) {
-          AppConfigManager.remove('send_ctrlenter');
+          Storage.remove('send_ctrlenter');
         } else {
-          AppConfigManager.set({send_ctrlenter: true});
+          Storage.set({send_ctrlenter: true});
         }
         $rootScope.$broadcast('settings_changed');
       }
@@ -1956,7 +1959,7 @@ angular.module('myApp.controllers', [])
     }
   })
 
-  .controller('ProfileEditModalController', function ($rootScope, $scope, $timeout, $modal, $modalInstance, AppUsersManager, AppChatsManager, MtpApiManager, AppConfigManager, NotificationsManager, MtpApiFileManager, ApiUpdatesManager) {
+  .controller('ProfileEditModalController', function ($rootScope, $scope, $timeout, $modal, $modalInstance, AppUsersManager, AppChatsManager, MtpApiManager, Storage, NotificationsManager, MtpApiFileManager, ApiUpdatesManager) {
 
     $scope.profile = {};
     $scope.error = {};
