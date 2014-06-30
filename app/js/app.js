@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.1.7 - messaging web application for MTProto
+ * Webogram v0.1.8 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -72,3 +72,7 @@ config(['$locationProvider', '$routeProvider', '$compileProvider', 'StorageProvi
   }
   $(document.body).addClass(classes.join(' '));
 })();
+
+$(function() {
+  FastClick.attach(document.body);
+});

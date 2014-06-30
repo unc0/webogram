@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.1.7 - messaging web application for MTProto
+ * Webogram v0.1.8 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -38,7 +38,7 @@ angular.module('myApp.directives', ['myApp.filters'])
     };
   })
 
-  .directive('myDialogs', function ($modalStack, $transition) {
+  .directive('myDialogs', function ($modalStack, $transition, $window, $timeout) {
 
     return {
       link: link
@@ -49,6 +49,7 @@ angular.module('myApp.directives', ['myApp.filters'])
       var dialogsWrap = $('.im_dialogs_wrap', element)[0],
           scrollableWrap = $('.im_dialogs_scrollable_wrap', element)[0],
           searchField = $('.im_dialogs_search_field', element)[0],
+          panelWrap = $('.im_dialogs_panel', element)[0],
           tabsWrap = $('.im_dialogs_tabs_wrap', element)[0],
           searchFocused = false;
 
@@ -58,8 +59,25 @@ angular.module('myApp.directives', ['myApp.filters'])
 
         if (!searchFocused) {
           $(scrollableWrap).find('.im_dialog_selected').removeClass('im_dialog_selected');
+          if (!searchField.value) {
+            $scope.$emit('ui_dialogs_search_clear');
+          }
         }
       });
+
+      $scope.$on('dialogs_search_toggle', function () {
+        $(panelWrap).addClass('im_dialogs_panel_search');
+        $scope.$broadcast('ui_dialogs_search');
+        $($window).scrollTop(0);
+        $timeout(function () {
+          searchField.focus();
+        })
+      });
+
+      $scope.$on('search_clear', function () {
+        $(panelWrap).removeClass('im_dialogs_panel_search');
+        $scope.$broadcast('ui_dialogs_search');
+      })
 
       attrs.$observe('hasTabs', function (newValue) {
         newValue = newValue == 'true';
@@ -72,7 +90,6 @@ angular.module('myApp.directives', ['myApp.filters'])
       $scope.$on('$destroy', function () {
         $(document).off('keydown', onKeyDown);
       });
-
 
       function onKeyDown(e) {
         if (!searchFocused && $modalStack.getTop()) {
@@ -186,8 +203,10 @@ angular.module('myApp.directives', ['myApp.filters'])
 
     function link ($scope, element, attrs) {
       var dialogsWrap = $('.im_dialogs_wrap', element)[0],
+          dialogsColWrap = $('.im_dialogs_col_wrap')[0],
           scrollableWrap = $('.im_dialogs_scrollable_wrap', element)[0],
           headWrap = $('.tg_page_head')[0],
+          panelWrap = $('.im_dialogs_panel')[0],
           footer = $('.im_page_footer')[0],
           hasTabs = false,
           moreNotified = false;
@@ -207,7 +226,9 @@ angular.module('myApp.directives', ['myApp.filters'])
       $scope.$on('ui_dialogs_tabs', function (e, newHasTabs) {
         hasTabs = newHasTabs;
         updateSizes();
-      })
+      });
+      $scope.$on('ui_dialogs_search', updateSizes);
+      $scope.$on('ui_dialogs_update', updateSizes);
 
 
       $scope.$on('ui_dialogs_append', function () {
@@ -258,8 +279,18 @@ angular.module('myApp.directives', ['myApp.filters'])
         if (!footer || !footer.offsetHeight) {
           footer = $('.im_page_footer')[0];
         }
+        if (!panelWrap || !panelWrap.offsetHeight) {
+          panelWrap = $('.im_dialogs_panel')[0];
+        }
+        if (!dialogsColWrap || !dialogsColWrap.offsetHeight) {
+          dialogsColWrap = $('.im_dialogs_col_wrap')[0];
+        }
         $(element).css({
-          height: $($window).height() - footer.offsetHeight - (headWrap ? headWrap.offsetHeight : 44) - (hasTabs ? 38 : 0) - 68
+          height: $($window).height() -
+                  footer.offsetHeight -
+                  (headWrap ? headWrap.offsetHeight : 44) -
+                  (panelWrap ? panelWrap.offsetHeight : 58) -
+                  parseInt($(dialogsColWrap).css('paddingBottom') || 0)
         });
 
         updateScroller();
@@ -361,8 +392,8 @@ angular.module('myApp.directives', ['myApp.filters'])
 
       onContentLoaded(function () {
         scrollableWrap.scrollTop = scrollableWrap.scrollHeight;
-        $(historyWrap).nanoScroller({preventPageScrolling: true, tabIndex: -1, iOSNativeScrolling: true});
       });
+      $(historyWrap).nanoScroller({preventPageScrolling: true, tabIndex: -1, iOSNativeScrolling: true});
 
       var updateScroller = function (delay) {
         // console.trace('scroller update', delay);
@@ -476,20 +507,25 @@ angular.module('myApp.directives', ['myApp.filters'])
         scrollableWrap.scrollHeight; // Some strange Chrome bug workaround
         $(scrollable).css({bottom: -(sh - st - ch)});
 
-        onContentLoaded(function () {
-          $(scrollableWrap).removeClass('im_history_to_bottom');
-          $(scrollable).css({bottom: ''});
-          scrollableWrap.scrollTop = st + scrollableWrap.scrollHeight - sh;
+        var upd = function () {
+            $(scrollableWrap).removeClass('im_history_to_bottom');
+            $(scrollable).css({bottom: ''});
+            scrollableWrap.scrollTop = st + scrollableWrap.scrollHeight - sh;
 
-          updateBottomizer();
-          moreNotified = false;
+            updateBottomizer();
+            moreNotified = false;
 
-          $timeout(function () {
-            if (scrollableWrap.scrollHeight != sh) {
-              $(scrollableWrap).trigger('scroll');
-            }
-          });
-        });
+            $timeout(function () {
+              if (scrollableWrap.scrollHeight != sh) {
+                $(scrollableWrap).trigger('scroll');
+              }
+            });
+
+            clearTimeout(timer);
+            unreg();
+          },
+          timer = setTimeout(upd, 0),
+          unreg = $scope.$on('$viewContentLoaded', upd);
       });
 
       $scope.$on('ui_history_append', function () {
@@ -699,7 +735,7 @@ angular.module('myApp.directives', ['myApp.filters'])
 
       });
 
-      $(submitBtn).on('mousedown', function (e) {
+      $(submitBtn).on('mousedown touchstart', function (e) {
         $(element).trigger('submit');
         $(element).trigger('message_send');
         resetAfterSubmit();
@@ -1317,7 +1353,7 @@ angular.module('myApp.directives', ['myApp.filters'])
       var onKeyDown = function (event) {
         var target = event.target;
         if (target && (target.tagName == 'INPUT' || target.tagName == 'TEXTAREA')) {
-          return false;
+          return;
         }
 
         switch (event.keyCode) {

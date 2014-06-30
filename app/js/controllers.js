@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.1.7 - messaging web application for MTProto
+ * Webogram v0.1.8 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -325,6 +325,10 @@ angular.module('myApp.controllers', [])
       $scope.$broadcast('history_media_toggle', mediaType);
     };
 
+    $scope.toggleSearch = function () {
+      $scope.$broadcast('dialogs_search_toggle');
+    };
+
     updateCurDialog();
 
     var lastSearch = false;
@@ -356,6 +360,9 @@ angular.module('myApp.controllers', [])
     $scope.contactsLoaded = false;
     if ($scope.search === undefined) {
       $scope.search = {};
+    }
+    if ($scope.isEmpty === undefined) {
+      $scope.isEmpty = {};
     }
     $scope.phonebookAvailable = PhonebookContactsService.isAvailable();
 
@@ -418,9 +425,6 @@ angular.module('myApp.controllers', [])
 
     var prevMessages = false;
     $scope.$watchCollection('search', function () {
-      if ($scope.search.messages && (!angular.isString($scope.search.query) || !$scope.search.query.length)) {
-        $scope.search.messages = false;
-      }
       if ($scope.search.messages != prevMessages) {
         prevMessages = $scope.search.messages;
         $scope.dialogs = [];
@@ -443,6 +447,12 @@ angular.module('myApp.controllers', [])
       }
     });
 
+    if (Config.Navigator.mobile) {
+      $scope.$watch('curDialog.peer', function () {
+        $scope.$broadcast('ui_dialogs_update')
+      });
+    }
+
     $scope.importPhonebook = function () {
       PhonebookContactsService.openPhonebookImport().result.then(function (foundContacts) {
         if (contactsShown && foundContacts.length) {
@@ -450,6 +460,13 @@ angular.module('myApp.controllers', [])
         }
       })
     };
+
+    $scope.searchClear = function () {
+      $scope.search.query = '';
+      $scope.search.messages = false;
+      $scope.$broadcast('search_clear');
+    }
+    $scope.$on('ui_dialogs_search_clear', $scope.searchClear);
 
     var searchTimeoutPromise;
     function getDialogs(force) {
@@ -1253,12 +1270,43 @@ angular.module('myApp.controllers', [])
     $scope.photo = AppPhotosManager.wrapForFull($scope.photoID);
     $scope.nav = {};
 
-    if (!$scope.messageID) {
+    if (!$scope.messageID || Config.Navigator.mobile) {
       $scope.nav.next = function () {
         $modalInstance.close();
       }
+    }
+
+    if (!$scope.messageID) {
       return;
     }
+
+
+    $scope.forward = function () {
+      var messageID = $scope.messageID;
+      PeersSelectService.selectPeer({confirm_type: 'FORWARD_PEER'}).then(function (peerString) {
+        var peerID = AppPeersManager.getPeerID(peerString);
+        AppMessagesManager.forwardMessages(peerID, [messageID]).then(function () {
+          $rootScope.$broadcast('history_focus', {peerString: peerString});
+        });
+      });
+    };
+
+
+    $scope.download = function () {
+      AppPhotosManager.downloadPhoto($scope.photoID);
+    };
+
+    if (Config.Navigator.mobile) {
+      $scope.canForward = true;
+      return;
+    }
+
+    $scope.delete = function () {
+      var messageID = $scope.messageID;
+      ErrorService.confirm({type: 'MESSAGE_DELETE'}).then(function () {
+        AppMessagesManager.deleteMessages([messageID]);
+      });
+    };
 
     var peerID = AppMessagesManager.getMessagePeer(AppMessagesManager.getMessage($scope.messageID)),
         inputPeer = AppPeersManager.getInputPeerByID(peerID),
@@ -1341,28 +1389,6 @@ angular.module('myApp.controllers', [])
       }
       movePosition(+1);
     };
-
-    $scope.forward = function () {
-      var messageID = $scope.messageID;
-      PeersSelectService.selectPeer({confirm_type: 'FORWARD_PEER'}).then(function (peerString) {
-        var peerID = AppPeersManager.getPeerID(peerString);
-        AppMessagesManager.forwardMessages(peerID, [messageID]).then(function () {
-          $rootScope.$broadcast('history_focus', {peerString: peerString});
-        });
-      });
-    };
-
-    $scope.delete = function () {
-      var messageID = $scope.messageID;
-      ErrorService.confirm({type: 'MESSAGE_DELETE'}).then(function () {
-        AppMessagesManager.deleteMessages([messageID]);
-      });
-    };
-
-    $scope.download = function () {
-      AppPhotosManager.downloadPhoto($scope.photoID);
-    };
-
 
     $scope.$on('history_delete', function (e, historyUpdate) {
       console.log(dT(), 'delete', historyUpdate);
