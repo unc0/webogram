@@ -4,7 +4,7 @@
 
   <div class="modal-body">
 
-    <h4 class="modal_simple_header visible-xs">Contacts</h4>
+    <h4 class="modal_simple_header visible-xs">联系人</h4>
 
     <div class="im_dialogs_modal_col_wrap" ng-controller="AppImDialogsController" my-dialogs>
       <div class="im_dialogs_panel">
@@ -15,7 +15,7 @@
       </div>
       <div my-dialogs-list modal="true" class="im_dialogs_modal_col">
         <div class="im_dialogs_wrap nano">
-          <div class="im_dialogs_scrollable_wrap content">
+          <div class="im_dialogs_scrollable_wrap nano-content">
             <ul class="nav nav-pills nav-stacked">
               <li class="im_dialog_wrap" my-dialog dialog-message="dialogMessage" ng-repeat="dialogMessage in dialogs track by dialogMessage.peerID"></li>
             </ul>

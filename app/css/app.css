@@ -809,7 +809,7 @@ a.tg_radio_on:hover i.icon-radio {
 }
 
 
-.im_dialogs_col .nano > .pane {
+.im_dialogs_col .nano > .nano-pane {
   background : rgba(0,0,0,0.0);
   width      : 12px;
   right: 0px;
@@ -825,7 +825,7 @@ a.tg_radio_on:hover i.icon-radio {
   -o-transition         : none;
   transition            : none;
 }
-.im_dialogs_col .nano > .pane > .slider {
+.im_dialogs_col .nano > .nano-pane > .nano-slider {
   background: #A5B1B9;
   margin: 0 5px;
   -moz-border-radius    : 0;
@@ -1068,9 +1068,9 @@ a.im_dialog_selected .im_dialog_date {
 .im_history_col {
 }
 
-.im_history_col .nano > .pane,
-.contacts_modal_col .nano > .pane,
-.im_dialogs_modal_col .nano > .pane {
+.im_history_col .nano > .nano-pane,
+.contacts_modal_col .nano > .nano-pane,
+.im_dialogs_modal_col .nano > .nano-pane {
   background : rgba(3,36,64,0.08);
   width      : 9px;
   right: 0;
@@ -1089,12 +1089,12 @@ a.im_dialog_selected .im_dialog_date {
   transition            : none;
 }
 
-.contacts_modal_col .nano > .pane {
+.contacts_modal_col .nano > .nano-pane {
   width: 6px;
   right: 7px;
 }
 
-.im_dialogs_modal_col .nano > .pane {
+.im_dialogs_modal_col .nano > .nano-pane {
   width: 6px;
   right: 2px;
 }
@@ -1102,13 +1102,13 @@ a.im_dialog_selected .im_dialog_date {
   padding: 0 12px 0 12px;
 }
 
-.im_history_col .nano > .pane {
+.im_history_col .nano > .nano-pane {
   top: 10px;
   right: 8px;
 }
-.im_history_col .nano > .pane > .slider,
-.contacts_modal_col .nano > .pane > .slider,
-.im_dialogs_modal_col .nano > .pane > .slider {
+.im_history_col .nano > .nano-pane > .nano-slider,
+.contacts_modal_col .nano > .nano-pane > .nano-slider,
+.im_dialogs_modal_col .nano > .nano-pane > .nano-slider {
   background : rgba(3,46,79,0.22);
   margin: 0;
   -moz-border-radius    : 2px;
@@ -1211,7 +1211,7 @@ a.im_dialog_selected .im_dialog_date {
 
 
 .im_history_wrap {
-  overflow: hidden;
+  /*overflow: hidden;*/
   /*overflow-y: scroll;*/
 }
 .im_history_scrollable_wrap {
@@ -1243,11 +1243,13 @@ a.im_dialog_selected .im_dialog_date {
 }
 
 .im_history_typing_wrap {
-  margin-top: 13px;
-  height: 18px;
+  /*margin-top: 13px;*/
+  /*height: 18px;*/
   line-height: 18px;
   width: 100%;
-  margin-bottom: 13px;
+  height: 49px;
+  /*margin-bottom: 13px;*/
+  padding: 13px 0 18px;
   overflow: hidden;
   -webkit-user-select: none;
 }
@@ -2439,11 +2441,11 @@ img.chat_modal_participant_photo {
 }
 
 
-.emoji-menu .nano > .pane {
+.emoji-menu .nano > .nano-pane {
   background : rgba(255,255,255,0.0);
   right: -2px;
 }
-.emoji-menu .nano > .pane > .slider {
+.emoji-menu .nano > .nano-pane > .nano-slider {
   background: #d1d1d1;
   margin: 0 3px 0 4px;
 }
@@ -3253,7 +3255,7 @@ ce671b orange
   padding: 14px 0;
 }
 
-.countries_modal_col .nano > .pane {
+.countries_modal_col .nano > .nano-pane {
   background : rgba(3,36,64,0.08);
   width      : 3px;
   right: 6px;
@@ -3266,7 +3268,7 @@ ce671b orange
   -webkit-border-radius : 0;
   border-radius         : 0;
 }
-.countries_modal_col .nano > .pane > .slider {
+.countries_modal_col .nano > .nano-pane > .nano-slider {
   background : rgba(3,46,79,0.22);
   margin: 0;
   -moz-border-radius    : 0;
