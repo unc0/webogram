@@ -1270,6 +1270,10 @@ angular.module('myApp.controllers', [])
     $scope.photo = AppPhotosManager.wrapForFull($scope.photoID);
     $scope.nav = {};
 
+    $scope.download = function () {
+      AppPhotosManager.downloadPhoto($scope.photoID);
+    };
+
     if (!$scope.messageID || Config.Navigator.mobile) {
       $scope.nav.next = function () {
         $modalInstance.close();
@@ -1291,10 +1295,6 @@ angular.module('myApp.controllers', [])
       });
     };
 
-
-    $scope.download = function () {
-      AppPhotosManager.downloadPhoto($scope.photoID);
-    };
 
     if (Config.Navigator.mobile) {
       $scope.canForward = true;
