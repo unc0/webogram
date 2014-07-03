@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.1.8 - messaging web application for MTProto
+ * Webogram v0.1.9 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -469,6 +469,7 @@ angular.module('myApp.directives', ['myApp.filters'])
           atBottom = false;
         } else {
           scrollableWrap.scrollTop = scrollableWrap.scrollHeight;
+          atBottom = true;
         }
         updateScroller();
         $timeout(function () {
@@ -515,7 +516,7 @@ angular.module('myApp.directives', ['myApp.filters'])
             $(scrollableWrap).removeClass('im_history_to_bottom');
             $(scrollable).css({bottom: '', marginLeft: ''});
             scrollableWrap.scrollTop = st + scrollableWrap.scrollHeight - sh;
-            
+
             updateBottomizer();
             moreNotified = false;
 
@@ -596,7 +597,7 @@ angular.module('myApp.directives', ['myApp.filters'])
       });
 
       function updateSizes (heightOnly) {
-        if (!element.is(':visible') || !$(element[0].parentNode).is(':visible')) {
+        if (!element.is(':visible') && !$(element[0].parentNode.parentNode).is(':visible')) {
           return;
         }
         if ($(sendFormWrap).is(':visible')) {
@@ -1408,7 +1409,7 @@ angular.module('myApp.directives', ['myApp.filters'])
 
     function link($scope, element, attrs) {
 
-      var scrollableWrap = $('.content', element)[0],
+      var scrollableWrap = $('.nano-content', element)[0],
           moreNotified = false;
 
       $(scrollableWrap).on('scroll', function (e) {
