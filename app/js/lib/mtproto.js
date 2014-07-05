@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.1.9 - messaging web application for MTProto
+ * Webogram v0.2 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -85,9 +85,7 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
       var fingerprintBytes = sha1Hash(buffer).slice(-8);
       fingerprintBytes.reverse();
 
-      var fingerprint = new BigInteger(fingerprintBytes).toString(16);
-
-      publicKeysParsed[fingerprint] = {
+      publicKeysParsed[bytesToHex(fingerprintBytes)] = {
         modulus: keyParsed.modulus,
         exponent: keyParsed.exponent
       };
@@ -168,7 +166,7 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
   };
 })
 
-.factory('MtpAuthorizer', function (MtpDcConfigurator, MtpRsaKeysManager, MtpSecureRandom, MtpMessageIdGenerator, $http, $q, $timeout) {
+.factory('MtpAuthorizer', function (MtpDcConfigurator, MtpRsaKeysManager, MtpSecureRandom, MtpMessageIdGenerator, CryptoWorker, $http, $q, $timeout) {
 
   function mtpSendPlainRequest (dcID, requestBuffer) {
     var requestLength = requestBuffer.byteLength,
@@ -256,29 +254,16 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
         throw new Error('No public key found');
       }
 
-      console.log(dT(), 'PQ factorization start');
-      if (!!window.Worker/* && false*/) {
-        var worker = new Worker('js/lib/pq_worker.js');
-
-        worker.onmessage = function (e) {
-          auth.p = e.data[0];
-          auth.q = e.data[1];
-          console.log(dT(), 'PQ factorization done');
-          mtpSendReqDhParams(auth);
-        };
-        worker.onerror = function(error) {
-          console.log('Worker error', error, error.stack);
-          deferred.reject(error);
-        };
-        worker.postMessage(auth.pq)
-      } else {
-        var pAndQ = pqPrimeFactorization(auth.pq);
+      console.log(dT(), 'PQ factorization start', auth.pq);
+      CryptoWorker.factorize(auth.pq).then(function (pAndQ) {
         auth.p = pAndQ[0];
         auth.q = pAndQ[1];
-
-        console.log(dT(), 'PQ factorization done');
+        console.log(dT(), 'PQ factorization done', pAndQ[2]);
         mtpSendReqDhParams(auth);
-      }
+      }, function (error) {
+        console.log('Worker error', error, error.stack);
+        deferred.reject(error);
+      });
     }, function (error) {
       console.log(dT(), 'req_pq error', error.message);
       deferred.reject(error);
@@ -290,6 +275,7 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
   };
 
   function mtpSendReqDhParams (auth) {
+
     var deferred = auth.deferred;
 
     auth.newNonce = new Array(32);
@@ -405,107 +391,107 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
   };
 
   function mtpSendSetClientDhParams(auth) {
-    var deferred = auth.deferred;
+    var deferred = auth.deferred,
+        gBytes = bytesFromHex(auth.g.toString(16));
 
     auth.b = new Array(256);
     MtpSecureRandom.nextBytes(auth.b);
 
-    var bBigInt = new BigInteger(auth.b);
-    var dhPrimeBigInt = new BigInteger(auth.dhPrime);
+    CryptoWorker.modPow(gBytes, auth.b, auth.dhPrime).then(function (gB) {
 
-    var gB = bytesFromBigInt(bigint(auth.g).modPow(bBigInt, dhPrimeBigInt));
+      var data = new TLSerialization({mtproto: true});
+      data.storeObject({
+        _: 'client_DH_inner_data',
+        nonce: auth.nonce,
+        server_nonce: auth.serverNonce,
+        retry_id: [0, auth.retry++],
+        g_b: gB,
+      }, 'Client_DH_Inner_Data');
 
-    var data = new TLSerialization({mtproto: true});
-    data.storeObject({
-      _: 'client_DH_inner_data',
-      nonce: auth.nonce,
-      server_nonce: auth.serverNonce,
-      retry_id: [0, auth.retry++],
-      g_b: gB,
-    }, 'Client_DH_Inner_Data');
+      var dataWithHash = sha1Hash(data.getBuffer()).concat(data.getBytes());
 
-    var dataWithHash = sha1Hash(data.getBuffer()).concat(data.getBytes());
+      var encryptedData = aesEncrypt(dataWithHash, auth.tmpAesKey, auth.tmpAesIv);
 
-    var encryptedData = aesEncrypt(dataWithHash, auth.tmpAesKey, auth.tmpAesIv);
+      var request = new TLSerialization({mtproto: true});
+      request.storeMethod('set_client_DH_params', {
+        nonce: auth.nonce,
+        server_nonce: auth.serverNonce,
+        encrypted_data: encryptedData
+      });
 
-    var request = new TLSerialization({mtproto: true});
-    request.storeMethod('set_client_DH_params', {
-      nonce: auth.nonce,
-      server_nonce: auth.serverNonce,
-      encrypted_data: encryptedData
-    });
+      console.log(dT(), 'Send set_client_DH_params');
+      mtpSendPlainRequest(auth.dcID, request.getBuffer()).then(function (result) {
+        var deserializer = result.data;
+        var response = deserializer.fetchObject('Set_client_DH_params_answer');
 
-    console.log(dT(), 'Send set_client_DH_params');
-    mtpSendPlainRequest(auth.dcID, request.getBuffer()).then(function (result) {
-      var deserializer = result.data;
-      var response = deserializer.fetchObject('Set_client_DH_params_answer');
-
-      if (response._ != 'dh_gen_ok' && response._ != 'dh_gen_retry' && response._ != 'dh_gen_fail') {
-        deferred.reject(new Error('Set_client_DH_params_answer response invalid: ' + response._));
-        return false;
-      }
-
-      if (!bytesCmp (auth.nonce, response.nonce)) {
-        deferred.reject(new Error('Set_client_DH_params_answer nonce mismatch'));
-        return false
-      }
-
-      if (!bytesCmp (auth.serverNonce, response.server_nonce)) {
-        deferred.reject(new Error('Set_client_DH_params_answer server_nonce mismatch'));
-        return false;
-      }
-
-      var bBigInt = new BigInteger(auth.b);
-      var dhPrimeBigInt = new BigInteger(auth.dhPrime);
-
-      var authKey =  bytesFromBigInt((new BigInteger(auth.gA)).modPow(bBigInt, dhPrimeBigInt)),
-          authKeyHash = sha1Hash(authKey),
-          authKeyAux  = authKeyHash.slice(0, 8),
-          authKeyID   = authKeyHash.slice(-8);
-
-      console.log(dT(), 'Got Set_client_DH_params_answer', response._);
-      switch (response._) {
-        case 'dh_gen_ok':
-          var newNonceHash1 = sha1Hash(auth.newNonce.concat([1], authKeyAux)).slice(-16);
-
-          if (!bytesCmp(newNonceHash1, response.new_nonce_hash1)) {
-            deferred.reject(new Error('Set_client_DH_params_answer new_nonce_hash1 mismatch'));
-            return false;
-          }
-
-          var serverSalt = bytesXor(auth.newNonce.slice(0, 8), auth.serverNonce.slice(0, 8));
-          // console.log('Auth successfull!', authKeyID, authKey, serverSalt);
-
-          auth.authKeyID = authKeyID;
-          auth.authKey = authKey;
-          auth.serverSalt = serverSalt;
-
-          deferred.resolve(auth);
-          break;
-
-        case 'dh_gen_retry':
-          var newNonceHash2 = sha1Hash(auth.newNonce.concat([2], authKeyAux)).slice(-16);
-          if (!bytesCmp(newNonceHash2, response.new_nonce_hash2)) {
-            deferred.reject(new Error('Set_client_DH_params_answer new_nonce_hash2 mismatch'));
-            return false;
-          }
-
-          return mtpSendSetClientDhParams(auth);
-
-        case 'dh_gen_fail':
-          var newNonceHash3 = sha1Hash(auth.newNonce.concat([3], authKeyAux)).slice(-16);
-          if (!bytesCmp(newNonceHash3, response.new_nonce_hash3)) {
-            deferred.reject(new Error('Set_client_DH_params_answer new_nonce_hash3 mismatch'));
-            return false;
-          }
-
-          deferred.reject(new Error('Set_client_DH_params_answer fail'));
+        if (response._ != 'dh_gen_ok' && response._ != 'dh_gen_retry' && response._ != 'dh_gen_fail') {
+          deferred.reject(new Error('Set_client_DH_params_answer response invalid: ' + response._));
           return false;
-      }
+        }
 
+        if (!bytesCmp (auth.nonce, response.nonce)) {
+          deferred.reject(new Error('Set_client_DH_params_answer nonce mismatch'));
+          return false
+        }
+
+        if (!bytesCmp (auth.serverNonce, response.server_nonce)) {
+          deferred.reject(new Error('Set_client_DH_params_answer server_nonce mismatch'));
+          return false;
+        }
+
+        CryptoWorker.modPow(auth.gA, auth.b, auth.dhPrime).then(function (authKey) {
+          var authKeyHash = sha1Hash(authKey),
+              authKeyAux  = authKeyHash.slice(0, 8),
+              authKeyID   = authKeyHash.slice(-8);
+
+          console.log(dT(), 'Got Set_client_DH_params_answer', response._);
+          switch (response._) {
+            case 'dh_gen_ok':
+              var newNonceHash1 = sha1Hash(auth.newNonce.concat([1], authKeyAux)).slice(-16);
+
+              if (!bytesCmp(newNonceHash1, response.new_nonce_hash1)) {
+                deferred.reject(new Error('Set_client_DH_params_answer new_nonce_hash1 mismatch'));
+                return false;
+              }
+
+              var serverSalt = bytesXor(auth.newNonce.slice(0, 8), auth.serverNonce.slice(0, 8));
+              // console.log('Auth successfull!', authKeyID, authKey, serverSalt);
+
+              auth.authKeyID = authKeyID;
+              auth.authKey = authKey;
+              auth.serverSalt = serverSalt;
+
+              deferred.resolve(auth);
+              break;
+
+            case 'dh_gen_retry':
+              var newNonceHash2 = sha1Hash(auth.newNonce.concat([2], authKeyAux)).slice(-16);
+              if (!bytesCmp(newNonceHash2, response.new_nonce_hash2)) {
+                deferred.reject(new Error('Set_client_DH_params_answer new_nonce_hash2 mismatch'));
+                return false;
+              }
+
+              return mtpSendSetClientDhParams(auth);
+
+            case 'dh_gen_fail':
+              var newNonceHash3 = sha1Hash(auth.newNonce.concat([3], authKeyAux)).slice(-16);
+              if (!bytesCmp(newNonceHash3, response.new_nonce_hash3)) {
+                deferred.reject(new Error('Set_client_DH_params_answer new_nonce_hash3 mismatch'));
+                return false;
+              }
+
+              deferred.reject(new Error('Set_client_DH_params_answer fail'));
+              return false;
+          }
+        }, function (error) {
+          deferred.reject(error);
+        })
+      }, function (error) {
+        deferred.reject(error);
+      });
     }, function (error) {
       deferred.reject(error);
-    });
+    })
   };
 
   var cached = {};
@@ -543,107 +529,7 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
 
 })
 
-.factory('MtpAesService', function ($q) {
-  if (!window.Worker || true) {
-    return {
-      encrypt: function (bytes, keyBytes, ivBytes) {
-        return $q.when(aesEncrypt(bytes, keyBytes, ivBytes));
-      },
-      decrypt: function (encryptedBytes, keyBytes, ivBytes) {
-        return $q.when(aesDecrypt(encryptedBytes, keyBytes, ivBytes));
-      }
-    };
-  }
-
-  var worker = new Worker('js/lib/aes_worker.js'),
-      taskID = 0,
-      awaiting = {};
-
-  worker.onmessage = function (e) {
-    var deferred = awaiting[e.data.taskID];
-    if (deferred !== undefined) {
-      deferred.resolve(e.data.result);
-      delete awaiting[e.data.taskID];
-    }
-    // console.log('AES worker message', e.data, deferred);
-  };
-  worker.onerror = function(error) {
-    console.log('AES Worker error', error, error.stack);
-  };
-
-  return {
-    encrypt: function (bytes, keyBytes, ivBytes) {
-      var deferred = $q.defer();
-
-      awaiting[taskID] = deferred;
-
-      // console.log('AES post message', {taskID: taskID, task: 'encrypt', bytes: bytes, keyBytes: keyBytes, ivBytes: ivBytes})
-      worker.postMessage({taskID: taskID, task: 'encrypt', bytes: bytes, keyBytes: keyBytes, ivBytes: ivBytes});
-
-      taskID++;
-
-      return deferred.promise;
-    },
-    decrypt: function (encryptedBytes, keyBytes, ivBytes) {
-      var deferred = $q.defer();
-
-      awaiting[taskID] = deferred;
-      worker.postMessage({taskID: taskID, task: 'decrypt', encryptedBytes: encryptedBytes, keyBytes: keyBytes, ivBytes: ivBytes});
-
-      taskID++;
-
-      return deferred.promise;
-    }
-  }
-})
-
-.factory('MtpSha1Service', function ($q) {
-  if (!window.Worker || true) {
-    return {
-      hash: function (bytes) {
-        var deferred = $q.defer();
-
-        setTimeout(function () {
-          deferred.resolve(sha1Hash(bytes));
-        }, 0);
-
-        return deferred.promise;
-      }
-    };
-  }
-
-  var worker = new Worker('js/lib/sha1_worker.js'),
-      taskID = 0,
-      awaiting = {};
-
-  worker.onmessage = function (e) {
-    var deferred = awaiting[e.data.taskID];
-    if (deferred !== undefined) {
-      deferred.resolve(e.data.result);
-      delete awaiting[e.data.taskID];
-    }
-    // console.log('sha1 got message', e.data, deferred);
-  };
-  worker.onerror = function(error) {
-    console.log('SHA-1 Worker error', error, error.stack);
-  };
-
-  return {
-    hash: function (bytes) {
-      var deferred = $q.defer();
-
-      awaiting[taskID] = deferred;
-      // console.log(11, taskID, bytes);
-      worker.postMessage({taskID: taskID, bytes: bytes});
-
-      taskID++;
-
-      return deferred.promise;
-    }
-  }
-})
-
-.factory('MtpNetworkerFactory', function (MtpDcConfigurator, MtpMessageIdGenerator, MtpSecureRandom, MtpSha1Service, MtpAesService, Storage, $http, $q, $timeout, $interval, $rootScope) {
+.factory('MtpNetworkerFactory', function (MtpDcConfigurator, MtpMessageIdGenerator, MtpSecureRandom, Storage, CryptoWorker, $http, $q, $timeout, $interval, $rootScope) {
 
   var updatesProcessor,
       iii = 0,
@@ -899,10 +785,10 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
         x = isOut ? 0 : 8;
 
     var promises = {
-      sha1a: MtpSha1Service.hash(msgKey.concat(authKey.slice(x, x + 32))),
-      sha1b: MtpSha1Service.hash(authKey.slice(32 + x, 48 + x).concat(msgKey, authKey.slice(48 + x, 64 + x))),
-      sha1c: MtpSha1Service.hash(authKey.slice(64 + x, 96 + x).concat(msgKey)),
-      sha1d: MtpSha1Service.hash(msgKey.concat(authKey.slice(96 + x, 128 + x)))
+      sha1a: CryptoWorker.sha1Hash(msgKey.concat(authKey.slice(x, x + 32))),
+      sha1b: CryptoWorker.sha1Hash(authKey.slice(32 + x, 48 + x).concat(msgKey, authKey.slice(48 + x, 64 + x))),
+      sha1c: CryptoWorker.sha1Hash(authKey.slice(64 + x, 96 + x).concat(msgKey)),
+      sha1d: CryptoWorker.sha1Hash(msgKey.concat(authKey.slice(96 + x, 128 + x)))
     };
 
     return $q.all(promises).then(function (result) {
@@ -1144,17 +1030,10 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
   MtpNetworker.prototype.getEncryptedMessage = function (bytes) {
     var self = this;
 
-    // console.log('enc', bytes);
-
-    return MtpSha1Service.hash(bytes).then(function (bytesHash) {
-      // console.log('bytesHash', bytesHash);
+    return CryptoWorker.sha1Hash(bytes).then(function (bytesHash) {
       var msgKey = bytesHash.slice(-16);
       return self.getMsgKeyIv(msgKey, true).then(function (keyIv) {
-        // console.log('keyIv', keyIv);
-        // console.time('Aes encrypt ' + bytes.length + ' bytes');
-        return MtpAesService.encrypt(bytes, keyIv[0], keyIv[1]).then(function (encryptedBytes) {
-          // console.log('encryptedBytes', encryptedBytes);
-          // console.timeEnd('Aes encrypt ' + bytes.length + ' bytes');
+        return CryptoWorker.aesEncrypt(bytes, keyIv[0], keyIv[1]).then(function (encryptedBytes) {
           return {
             bytes: encryptedBytes,
             msgKey: msgKey
@@ -1166,11 +1045,7 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
 
   MtpNetworker.prototype.getDecryptedMessage = function (msgKey, encryptedData) {
     return this.getMsgKeyIv(msgKey, false).then(function (keyIv) {
-      // console.time('Aes decrypt ' + encryptedData.length + ' bytes');
-      return MtpAesService.decrypt(encryptedData, keyIv[0], keyIv[1])/*.then(function (a) {
-        console.timeEnd('Aes decrypt ' + encryptedData.length + ' bytes');
-        return a;
-      })*/;
+      return CryptoWorker.aesDecrypt(encryptedData, keyIv[0], keyIv[1]);
     });
   };
 
@@ -1246,7 +1121,7 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
 
       var offset = deserializer.getOffset();
 
-      return MtpSha1Service.hash(dataWithPadding.slice(0, offset)).then(function (dataHashed) {
+      return CryptoWorker.sha1Hash(dataWithPadding.slice(0, offset)).then(function (dataHashed) {
         if (!bytesCmp(msgKey, dataHashed.slice(-16))) {
           throw new Error('server msgKey mismatch');
         }

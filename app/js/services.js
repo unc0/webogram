@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.1.9 - messaging web application for MTProto
+ * Webogram v0.2 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -3279,6 +3279,7 @@ angular.module('myApp.services', [])
   }
 
   function start () {
+    registerDevice();
     if (!notificationsUiSupport) {
       return false;
     }
@@ -3332,10 +3333,17 @@ angular.module('myApp.services', [])
 
       notification.onclick = function () {
         notification.close();
-        if (window.chrome && chrome.app && chrome.app.window) {
-          chrome.app.window.current().focus();
+        if (window.mozApps && document.hidden) {
+          // Get app instance and launch it to bring app to foreground
+          window.mozApps.getSelf().onsuccess = function() {
+            this.result.launch();
+          };
+        } else {
+          if (window.chrome && chrome.app && chrome.app.window) {
+            chrome.app.window.current().focus();
+          }
+          window.focus();
         }
-        window.focus();
         notificationsClear();
         if (data.onclick) {
           data.onclick();
@@ -3381,6 +3389,46 @@ angular.module('myApp.services', [])
       } catch (e) {}
     });
     notificationsShown = {};
+  }
+
+  var registeredDevice = false;
+
+  function registerDevice () {
+    if (registeredDevice) {
+      return false;
+    }
+    if (navigator.push) {
+      var req = navigator.push.register();
+      
+      req.onsuccess = function(e) {
+        registeredDevice = req.result;
+        MtpApiManager.invokeApi('account.registerDevice', {
+          token_type: 4,
+          token: registeredDevice,
+          device_model: navigator.userAgent || 'Unknown UserAgent',
+          system_version: navigator.platform  || 'Unknown Platform',
+          app_version: Config.App.version,
+          app_sandbox: false,
+          lang_code: navigator.language || 'en'
+        });
+      }
+
+      req.onerror = function(e) {
+        console.error('Push register error', e);
+      }
+    }
+  }
+
+  function unregisterDevice () {
+    if (!registeredDevice) {
+      return false;
+    }
+    MtpApiManager.invokeApi('account.unregisterDevice', {
+      token_type: 4,
+      token: registeredDevice
+    }).then(function () {
+      registeredDevice = false;
+    })
   }
 })
 
@@ -3484,13 +3532,16 @@ angular.module('myApp.services', [])
 
     var scope = $rootScope.$new();
     scope.multiSelect = multiSelect;
+    if (multiSelect) {
+      scope.action = 'select';
+    }
     angular.extend(scope, options);
 
     return $modal.open({
       templateUrl: 'partials/contacts_modal.html',
       controller: 'ContactsModalController',
       scope: scope,
-      windowClass: 'contacts_modal_window'
+      windowClass: 'contacts_modal_window page_modal'
     }).result;
   }
 

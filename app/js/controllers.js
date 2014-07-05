@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.1.9 - messaging web application for MTProto
+ * Webogram v0.2 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -273,7 +273,7 @@ angular.module('myApp.controllers', [])
             templateUrl: 'partials/chat_create_modal.html',
             controller: 'ChatCreateModalController',
             scope: scope,
-            windowClass: 'contacts_modal_window'
+            windowClass: 'group_edit_modal_window'
           });
         }
 
@@ -1815,7 +1815,7 @@ angular.module('myApp.controllers', [])
         templateUrl: 'partials/chat_edit_modal.html',
         controller: 'ChatEditModalController',
         scope: scope,
-        windowClass: 'contacts_modal_window'
+        windowClass: 'group_edit_modal_window'
       });
     }
 
@@ -2031,12 +2031,10 @@ angular.module('myApp.controllers', [])
 
     $scope.contacts = [];
     $scope.search = {};
-    $scope.slice = {limit: 20, limitDelta: 20}
+    $scope.slice = {limit: 20, limitDelta: 20};
 
-
-    $scope.selectedContacts = {};
+    resetSelected();
     $scope.disabledContacts = {};
-    $scope.selectedCount = 0;
 
     if ($scope.disabled) {
       for (var i = 0; i < $scope.disabled.length; i++) {
@@ -2052,6 +2050,11 @@ angular.module('myApp.controllers', [])
         }
       }
     }
+
+    function resetSelected () {
+      $scope.selectedContacts = {};
+      $scope.selectedCount = 0;
+    };
 
     function updateContacts (query) {
       AppUsersManager.getContacts(query).then(function (contactsList) {
@@ -2071,6 +2074,12 @@ angular.module('myApp.controllers', [])
     };
 
     $scope.$watch('search.query', updateContacts);
+
+    $scope.toggleEdit = function (enabled) {
+      $scope.action = enabled ? 'edit' : '';
+      $scope.multiSelect = enabled;
+      resetSelected();
+    };
 
     $scope.contactSelect = function (userID) {
       if ($scope.disabledContacts[userID]) {
@@ -2096,7 +2105,20 @@ angular.module('myApp.controllers', [])
         });
         return $modalInstance.close(selectedUserIDs);
       }
-    }
+    };
+
+    $scope.deleteSelected = function () {
+      if ($scope.selectedCount > 0) {
+        var selectedUserIDs = [];
+        angular.forEach($scope.selectedContacts, function (t, userID) {
+          selectedUserIDs.push(userID);
+        });
+        AppUsersManager.deleteContacts(selectedUserIDs).then(function () {
+          resetSelected();
+          updateContacts($scope.search.query);
+        });
+      }
+    };
 
     $scope.importContact = function () {
       AppUsersManager.openImportContact().then(function () {

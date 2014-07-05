@@ -59,10 +59,12 @@
             <li>
               <a ng-click="toggleMedia()" class="navbar-quick-media-back" ng-switch="historyFilter.mediaType">
                 <i class="icon icon-back"></i>
-                <h4 ng-switch-when="photos">图片</h4>
-                <h4 ng-switch-when="video">视频</h4>
-                <h4 ng-switch-when="documents">文档</h4>
-                <h4 ng-switch-when="audio">语音信息</h4>
+                <div class="navbar-quick-back-title">
+                  <h4 ng-switch-when="photos">图片</h4>
+                  <h4 ng-switch-when="video">视频</h4>
+                  <h4 ng-switch-when="documents">文档</h4>
+                  <h4 ng-switch-when="audio">语音信息</h4>
+                </div>
               </a>
             </li>
           </ul>
@@ -70,19 +72,23 @@
             <li ng-switch-when="true">
               <a href="#/im" class="navbar-quick-profile-back">
                 <i class="icon icon-back"></i>
-                <h4 ng-bind-html="historyPeer.data.rFullName"></h4>
-                <small ng-bind="historyPeer.data | userStatus"></small>
+                <div class="navbar-quick-back-title">
+                  <h4 ng-bind-html="historyPeer.data.rFullName"></h4>
+                  <small ng-bind="historyPeer.data | userStatus"></small>
+                </div>
               </a>
             </li>
             <li ng-switch-default>
               <a href="#/im" class="navbar-quick-group-back">
                 <i class="icon icon-back"></i>
-                <h4 ng-bind-html="historyPeer.data.rTitle"></h4>
-                <small>
-                  <ng-pluralize count="historyPeer.data.participants_count"
-                                   when="{'0': '没有成员', 'one': '1 位成员', 'other': '{} 位成员'}">
-                  </ng-pluralize>
-                </small>
+                <div class="navbar-quick-back-title">
+                  <h4 ng-bind-html="historyPeer.data.rTitle"></h4>
+                  <small>
+                    <ng-pluralize count="historyPeer.data.participants_count"
+                                     when="{'0': '没有成员', 'one': '1 位成员', 'other': '{} 位成员'}">
+                    </ng-pluralize>
+                  </small>
+                </div>
               </a>
             </li>
           </ul>
