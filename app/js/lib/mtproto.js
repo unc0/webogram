@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.2 - messaging web application for MTProto
+ * Webogram v0.2.1 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -198,10 +198,9 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
       responseType: 'arraybuffer',
       transformRequest: null,
       transformResponse: function (responseBuffer) {
-        var deserializer = new TLDeserialization(responseBuffer, {mtproto: true});
-
         try {
 
+          var deserializer = new TLDeserialization(responseBuffer, {mtproto: true});
           var auth_key_id = deserializer.fetchLong('auth_key_id');
           var msg_id      = deserializer.fetchLong('msg_id');
           var msg_len     = deserializer.fetchInt('msg_len');
@@ -520,7 +519,13 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
       mtpSendReqPQ(auth);
     });
 
-    return cached[dcID] = auth.deferred.promise;
+    cached[dcID] = auth.deferred.promise;
+
+    cached[dcID]['catch'](function () {
+      delete cached[dcID];
+    })
+
+    return cached[dcID];
   };
 
   return {
@@ -577,6 +582,10 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
       $rootScope.offline = true;
       $rootScope.offlineConnecting = true;
     }
+
+    if (Config.Navigator.mobile) {
+      this.setupMobileSleep();
+    }
   };
 
   MtpNetworker.prototype.updateSession = function () {
@@ -589,6 +598,26 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
       this.sessionID[0] = 0xAB;
       this.sessionID[1] = 0xCD;
     }
+  };
+
+  MtpNetworker.prototype.setupMobileSleep = function () {
+    var self = this;
+    $rootScope.$watch('idle.isIDLE', function (isIDLE) {
+      if (isIDLE) {
+        self.sleepAfter = tsNow() + 30000;
+      } else {
+        delete self.sleepAfter;
+        self.checkLongPoll();
+      }
+    });
+
+    $rootScope.$on('push_received', function () {
+      // console.log(dT(), 'push recieved', self.sleepAfter);
+      if (self.sleepAfter) {
+        self.sleepAfter = tsNow() + 30000;
+        self.checkLongPoll();
+      }
+    });
   };
 
   MtpNetworker.prototype.updateSentMessage = function (sentMessageID) {
@@ -711,14 +740,18 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
 
   MtpNetworker.prototype.checkLongPoll = function(force) {
     var isClean = this.cleanupSent();
-    // console.log('Check lp', this.longPollPending, tsNow());
+    // console.log('Check lp', this.longPollPending, tsNow(), this.dcID, isClean);
     if (this.longPollPending && tsNow() < this.longPollPending || this.offline) {
       return false;
     }
     var self = this;
     Storage.get('dc').then(function (baseDcID) {
-      if (isClean && (baseDcID != self.dcID || self.upload)) {
-        // console.warn('send long-poll for guest DC is delayed', self.dcID);
+      if (isClean && (
+                      baseDcID != self.dcID ||
+                      self.upload ||
+                      self.sleepAfter && tsNow() > self.sleepAfter
+      )) {
+        // console.warn(dT(), 'Send long-poll for DC is delayed', self.dcID, self.sleepAfter);
         return;
       }
       self.sendLongPoll();

@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.2 - messaging web application for MTProto
+ * Webogram v0.2.1 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -821,9 +821,10 @@ angular.module('myApp.controllers', [])
       var curJump = jump,
           curMoreJump = moreJump,
           inputMediaFilter = $scope.historyFilter.mediaType && {_: inputMediaFilters[$scope.historyFilter.mediaType]},
+          limit = Config.Navigator.mobile ? 20 : 0,
           getMessagesPromise = inputMediaFilter
-        ? AppMessagesManager.getSearch($scope.curDialog.inputPeer, '', inputMediaFilter, maxID)
-        : AppMessagesManager.getHistory($scope.curDialog.inputPeer, maxID);
+        ? AppMessagesManager.getSearch($scope.curDialog.inputPeer, '', inputMediaFilter, maxID, limit)
+        : AppMessagesManager.getHistory($scope.curDialog.inputPeer, maxID, limit);
 
       getMessagesPromise.then(function (historyResult) {
         if (curJump != jump || curMoreJump != moreJump) return;
@@ -860,6 +861,9 @@ angular.module('myApp.controllers', [])
       }
       else if (forceRecent) {
         limit = 10;
+      }
+      else if (Config.Navigator.mobile) {
+        limit = 20;
       }
 
       var curJump = ++jump,
