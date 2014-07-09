@@ -30,53 +30,58 @@
       </span>
     </div>
 
-    <div class="im_dialog_message">
-      <span class="im_dialog_chat_from_wrap">
-        <span
-          class="im_dialog_chat_from"
-          ng-if="!dialogMessage.out &amp;&amp; dialogMessage.chatID"
-          ng-bind-html="dialogMessage.fromUser.rFirstName"
-        ></span><span
-          class="im_dialog_chat_from"
-          ng-if="dialogMessage.out"
-        >你</span>{{((dialogMessage.out || dialogMessage.peerID &lt; 0) &amp;&amp; (dialogMessage.message.length || dialogMessage.media &amp;&amp; dialogMessage.media._ != 'messageMediaEmpty')) ? ':' : ''}}
-      </span>
+    <div ng-switch="dialogMessage.deleted">
+      <div ng-switch-when="true" class="im_dialog_message">
+        <span class="im_dialog_message_text">已删除的信息</span>
+      </div>
+      <div ng-switch-default class="im_dialog_message">
+        <span class="im_dialog_chat_from_wrap">
+          <span
+            class="im_dialog_chat_from"
+            ng-if="!dialogMessage.out &amp;&amp; dialogMessage.chatID"
+            ng-bind-html="dialogMessage.fromUser.rFirstName"
+          ></span><span
+            class="im_dialog_chat_from"
+            ng-if="dialogMessage.out"
+          >You</span>{{((dialogMessage.out || dialogMessage.peerID &lt; 0) &amp;&amp; (dialogMessage.message.length || dialogMessage.media &amp;&amp; dialogMessage.media._ != 'messageMediaEmpty')) ? ':' : ''}}
+        </span>
 
-      <span class="im_dialog_message_media" ng-if="dialogMessage.media &amp;&amp; dialogMessage.media._ != 'messageMediaEmpty'" ng-switch="dialogMessage.media._">
-        <span ng-switch-when="messageMediaPhoto">图片</span>
-        <span ng-switch-when="messageMediaVideo">视频</span>
-        <span ng-switch-when="messageMediaDocument">文档</span>
-        <span ng-switch-when="messageMediaAudio">音频</span>
-        <span ng-switch-when="messageMediaGeo">位置</span>
-        <span ng-switch-when="messageMediaContact">联系人</span>
-      </span>
+        <span class="im_dialog_message_media" ng-if="dialogMessage.media &amp;&amp; dialogMessage.media._ != 'messageMediaEmpty'" ng-switch="dialogMessage.media._">
+          <span ng-switch-when="messageMediaPhoto">图片</span>
+          <span ng-switch-when="messageMediaVideo">视频</span>
+          <span ng-switch-when="messageMediaDocument">文档</span>
+          <span ng-switch-when="messageMediaAudio">音频</span>
+          <span ng-switch-when="messageMediaGeo">位置</span>
+          <span ng-switch-when="messageMediaContact">联系人</span>
+        </span>
 
-      <span class="im_dialog_message_service" ng-if="dialogMessage._ == 'messageService'" ng-switch="dialogMessage.action._">
-        <span ng-switch-when="messageActionChatCreate">建立了群</span>
-        <span ng-switch-when="messageActionChatEditTitle">修改了群名字</span>
-        <span ng-switch-when="messageActionChatEditPhoto">修改了群图标</span>
-        <span ng-switch-when="messageActionChatDeletePhoto">删除了群图标</span>
+        <span class="im_dialog_message_service" ng-if="dialogMessage._ == 'messageService'" ng-switch="dialogMessage.action._">
+          <span ng-switch-when="messageActionChatCreate">建立了群</span>
+          <span ng-switch-when="messageActionChatEditTitle">修改了群名字</span>
+          <span ng-switch-when="messageActionChatEditPhoto">修改了群图标</span>
+          <span ng-switch-when="messageActionChatDeletePhoto">删除了群图标</span>
 
-        <span ng-switch-when="messageActionChatAddUser" ng-switch="dialogMessage.from_id == dialogMessage.action.user_id">
-          <span ng-switch-when="true">
-            重新加入此群
+          <span ng-switch-when="messageActionChatAddUser" ng-switch="dialogMessage.from_id == dialogMessage.action.user_id">
+            <span ng-switch-when="true">
+              重新加入此群
+            </span>
+            <span ng-switch-default>
+              <span ng-bind-html="dialogMessage.action.user.rFullName"></span> 已被邀请
+            </span>
           </span>
-          <span ng-switch-default>
-            <span ng-bind-html="dialogMessage.action.user.rFullName"></span> 已被邀请
+
+          <span ng-switch-when="messageActionChatDeleteUser" ng-switch="dialogMessage.from_id == dialogMessage.action.user_id">
+            <span ng-switch-when="true">
+              退出此群
+            </span>
+            <span ng-switch-default>
+              <span ng-bind-html="dialogMessage.action.user.rFullName"></span> 已被移除
+            </span>
           </span>
         </span>
 
-        <span ng-switch-when="messageActionChatDeleteUser" ng-switch="dialogMessage.from_id == dialogMessage.action.user_id">
-          <span ng-switch-when="true">
-            退出此群
-          </span>
-          <span ng-switch-default>
-            <span ng-bind-html="dialogMessage.action.user.rFullName"></span> 已被移除
-          </span>
-        </span>
-      </span>
-
-      <span class="im_dialog_message_text" ng-if="dialogMessage.message.length" ng-bind-html="dialogMessage.richMessage"></span>
+        <span class="im_dialog_message_text" ng-if="dialogMessage.message.length" ng-bind-html="dialogMessage.richMessage"></span>
+      </div>
     </div>
 
   </div>
