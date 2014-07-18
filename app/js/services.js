@@ -3266,8 +3266,8 @@ angular.module('myApp.services', [])
           $('link[rel="icon"]').replaceWith(faviconBackupEl);
         } else {
           document.title = notificationsCount > 1
-            ? (notificationsCount + ' notifications')
-            : '1 notification';
+            ? (notificationsCount + ' 条提醒')
+            : '1 条提醒';
 
           $('link[rel="icon"]').replaceWith(faviconNewEl);
         }
