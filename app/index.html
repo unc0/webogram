@@ -89,6 +89,14 @@
 
   <script type="text/javascript" src="js/directives.js"></script>
   <!-- endbuild -->
-
+<script type="text/javascript">
+	// Open links in default $BROWSER
+	$(document).ready(function(){
+		$(document).on('click', ".js-external-link", function(event) {
+			gui.Shell.openExternal($(this).attr('href'));
+			event.preventDefault();
+		});
+	});
+</script>
 </body>
 </html>
