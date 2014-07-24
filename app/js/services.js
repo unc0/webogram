@@ -320,7 +320,7 @@ angular.module('myApp.services', [])
   }
 })
 
-.service('PhonebookContactsService', function ($q, $modal, $sce) {
+.service('PhonebookContactsService', function ($q, $modal, $sce, FileManager) {
 
   var phonebookContactsPromise;
 
@@ -331,7 +331,12 @@ angular.module('myApp.services', [])
   }
 
   function isAvailable () {
-    return window.navigator && window.navigator.mozContacts && window.navigator.mozContacts.getAll;
+    try {
+      return navigator.mozContacts && navigator.mozContacts.getAll;
+    } catch (e) {
+      console.error(dT(), 'phonebook n/a', e);
+      return false;
+    }
   }
 
   function openPhonebookImport () {
@@ -347,9 +352,14 @@ angular.module('myApp.services', [])
       return phonebookContactsPromise;
     }
 
+    try {
+      var request = window.navigator.mozContacts.getAll({});
+    } catch (e) {
+      return $q.reject(e);
+    }
+
     var deferred = $q.defer(),
         contacts = [],
-        request = window.navigator.mozContacts.getAll({}),
         count = 0;
 
     request.onsuccess = function () {
@@ -366,9 +376,12 @@ angular.module('myApp.services', [])
             contact.phones.push(this.result.tel[i].value);
           }
         }
-        if (this.result.photo) {
-          contact.photo = URL.createObjectURL(this.result.photo[0]);
-        } else {
+        if (this.result.photo && this.result.photo[0]) {
+          try {
+            contact.photo = FileManager.getUrl(this.result.photo[0]);
+          } catch (e) {}
+        }
+        if (!contact.photo) {
           contact.photo = 'img/placeholders/UserAvatar' + ((Math.abs(count) % 8) + 1) + '@2x.png';
         }
         contact.photo = $sce.trustAsResourceUrl(contact.photo);
