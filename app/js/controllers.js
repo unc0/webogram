@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.2.1 - messaging web application for MTProto
+ * Webogram v0.2.5 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -233,6 +233,7 @@ angular.module('myApp.controllers', [])
     $scope.search = {};
     $scope.historyFilter = {mediaType: false};
     $scope.historyPeer = {};
+    $scope.historyState = {selectActions: false, typing: []};
 
     $scope.openSettings = function () {
       $modal.open({
@@ -316,15 +317,15 @@ angular.module('myApp.controllers', [])
     $scope.toggleEdit = function () {
       $scope.$broadcast('history_edit_toggle');
     };
-
-    $scope.returnToRecent = function () {
-      $scope.$broadcast('history_return_recent');
+    $scope.selectedFlush = function () {
+      $scope.$broadcast('history_edit_flush');
     };
-
     $scope.toggleMedia = function (mediaType) {
       $scope.$broadcast('history_media_toggle', mediaType);
     };
-
+    $scope.returnToRecent = function () {
+      $scope.$broadcast('history_return_recent');
+    };
     $scope.toggleSearch = function () {
       $scope.$broadcast('dialogs_search_toggle');
     };
@@ -649,9 +650,8 @@ angular.module('myApp.controllers', [])
     $scope.skippedHistory = false;
     $scope.selectedMsgs = {};
     $scope.selectedCount = 0;
-    $scope.selectActions = false;
+    $scope.historyState.selectActions = false;
     $scope.missedCount = 0;
-    $scope.typing = {};
     $scope.state = {};
 
     $scope.toggleMessage = toggleMessage;
@@ -665,9 +665,12 @@ angular.module('myApp.controllers', [])
     $scope.returnToRecent = returnToRecent;
 
     $scope.$on('history_edit_toggle', toggleEdit);
+    $scope.$on('history_edit_flush', selectedFlush);
     $scope.$on('history_media_toggle', function (e, mediaType) {
       toggleMedia(mediaType);
     });
+
+
     $scope.$on('history_return_recent', returnToRecent);
 
     var peerID,
@@ -733,7 +736,7 @@ angular.module('myApp.controllers', [])
       });
 
       if (preload) {
-        $scope.typing = {};
+        $scope.historyState.typing.splice();
         $scope.$broadcast('ui_peer_change');
         $scope.$broadcast('ui_history_change');
         safeReplaceObject($scope.state, {loaded: true});
@@ -912,7 +915,7 @@ angular.module('myApp.controllers', [])
         $scope.$broadcast('ui_selection_clear');
       }
 
-      if (!$scope.selectActions && !$(target).hasClass('icon-select-tick') && !$(target).hasClass('im_content_message_select_area')) {
+      if (!$scope.historyState.selectActions && !$(target).hasClass('icon-select-tick') && !$(target).hasClass('im_content_message_select_area')) {
         return false;
       }
 
@@ -921,7 +924,7 @@ angular.module('myApp.controllers', [])
         delete $scope.selectedMsgs[messageID];
         $scope.selectedCount--;
         if (!$scope.selectedCount) {
-          $scope.selectActions = false;
+          $scope.historyState.selectActions = false;
           $scope.$broadcast('ui_panel_update');
         }
       } else {
@@ -952,8 +955,8 @@ angular.module('myApp.controllers', [])
 
         $scope.selectedMsgs[messageID] = true;
         $scope.selectedCount++;
-        if (!$scope.selectActions) {
-          $scope.selectActions = true;
+        if (!$scope.historyState.selectActions) {
+          $scope.historyState.selectActions = true;
           $scope.$broadcast('ui_panel_update');
         }
       }
@@ -962,7 +965,7 @@ angular.module('myApp.controllers', [])
     function selectedCancel (noBroadcast) {
       $scope.selectedMsgs = {};
       $scope.selectedCount = 0;
-      $scope.selectActions = false;
+      $scope.historyState.selectActions = false;
       lastSelectID = false;
       if (!noBroadcast) {
         $scope.$broadcast('ui_panel_update');
@@ -1009,10 +1012,10 @@ angular.module('myApp.controllers', [])
     }
 
     function toggleEdit () {
-      if ($scope.selectActions) {
+      if ($scope.historyState.selectActions) {
         selectedCancel();
       } else {
-        $scope.selectActions = true;
+        $scope.historyState.selectActions = true;
         $scope.$broadcast('ui_panel_update');
       }
     }
@@ -1035,11 +1038,9 @@ angular.module('myApp.controllers', [])
       }
     }
 
-
-    var typingTimeouts = {};
-
     $scope.$on('history_update', angular.noop);
 
+    var typingTimeouts = {};
     $scope.$on('history_append', function (e, addedMessage) {
       if (addedMessage.peerID == $scope.curDialog.peerID) {
         if ($scope.historyFilter.mediaType || $scope.skippedHistory) {
@@ -1054,7 +1055,7 @@ angular.module('myApp.controllers', [])
         // console.trace();
         $scope.history.push(AppMessagesManager.wrapForHistory(addedMessage.messageID));
         AppMessagesManager.regroupWrappedHistory($scope.history, -3);
-        $scope.typing = {};
+        $scope.historyState.typing.splice();
         $scope.$broadcast('ui_history_append_new', {my: addedMessage.my});
         if (addedMessage.my) {
           delete $scope.historyUnreadAfter;
@@ -1096,28 +1097,24 @@ angular.module('myApp.controllers', [])
     });
 
     $scope.$on('apiUpdate', function (e, update) {
-      // console.log('on apiUpdate inline', update);
       switch (update._) {
         case 'updateUserTyping':
-          if (update.user_id == $scope.curDialog.peerID && AppUsersManager.hasUser(update.user_id)) {
-            $scope.typing = {user: AppUsersManager.getUser(update.user_id)};
-
-            $timeout.cancel(typingTimeouts[update.user_id]);
-
-            typingTimeouts[update.user_id] = $timeout(function () {
-              $scope.typing = {};
-            }, 6000);
-          }
-          break;
-
         case 'updateChatUserTyping':
-          if (-update.chat_id == $scope.curDialog.peerID && AppUsersManager.hasUser(update.user_id)) {
-            $scope.typing = {user: AppUsersManager.getUser(update.user_id)};
-
+          if (AppUsersManager.hasUser(update.user_id) &&
+              $scope.curDialog.peerID == (update._ == 'updateUserTyping'
+                ? update.user_id
+                : -update.chat_id
+              )) {
+            if ($scope.historyState.typing.indexOf(update.user_id) == -1) {
+              $scope.historyState.typing.push(update.user_id);
+            }
             $timeout.cancel(typingTimeouts[update.user_id]);
 
             typingTimeouts[update.user_id] = $timeout(function () {
-              $scope.typing = {};
+              var pos = $scope.historyState.typing.indexOf(update.user_id);
+              if (pos !== -1) {
+                $scope.historyState.typing.splice(pos, 1);
+              }
             }, 6000);
           }
           break;
@@ -1280,6 +1277,7 @@ angular.module('myApp.controllers', [])
 
     if (Config.Navigator.mobile) {
       $scope.canForward = true;
+      $scope.canDelete = true;
       return;
     }
 
@@ -1528,6 +1526,10 @@ angular.module('myApp.controllers', [])
       ErrorService.confirm({type: 'MESSAGE_DELETE'}).then(function () {
         AppMessagesManager.deleteMessages([messageID]);
       });
+    };
+
+    $scope.download = function () {
+      $rootScope.downloadVideo($scope.videoID)
     };
 
     $scope.$on('history_delete', function (e, historyUpdate) {
