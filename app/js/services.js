@@ -328,15 +328,18 @@ angular.module('myApp.services', [])
     isAvailable: isAvailable,
     openPhonebookImport: openPhonebookImport,
     getPhonebookContacts: getPhonebookContacts
-  }
+  };
 
   function isAvailable () {
-    try {
-      return navigator.mozContacts && navigator.mozContacts.getAll;
-    } catch (e) {
-      console.error(dT(), 'phonebook n/a', e);
-      return false;
+    if (Config.Navigator.ffos && Config.Modes.packed) {
+      try {
+        return navigator.mozContacts && navigator.mozContacts.getAll;
+      } catch (e) {
+        console.error(dT(), 'phonebook n/a', e);
+        return false;
+      }
     }
+    return false;
   }
 
   function openPhonebookImport () {

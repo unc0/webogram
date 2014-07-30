@@ -116,7 +116,7 @@
 
         <ul ng-switch-when="true" class="nav navbar-nav navbar-offline">
           <li ng-show="!offlineConnecting"><span class="navbar-offline-text">离线状态，请连接互联网<span my-loading-dots></span></span></li>
-          <li ng-show="!offlineConnecting"><a href="" ng-click="retryOnline()">重试</a></li>
+          <li ng-show="!offlineConnecting" class="hidden-xs"><a href="" ng-click="retryOnline()">重试</a></li>
           <li ng-show="offlineConnecting"><span class="navbar-offline-text">正在连接<span my-loading-dots></span></span></li>
         </ul>
 

@@ -175,6 +175,8 @@ html {
   color: #FFF;
   margin: 0;
   white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 .navbar-quick-back-title {
   max-width: 160px;
@@ -364,7 +366,7 @@ html {
 
 .im_message_fwd .im_message_text {
   min-height: 21px;
-} 
+}
 .im_grouped_fwd .im_message_text,
 .im_grouped_fwd_short .im_message_text {
   min-height: 0;
@@ -512,16 +514,18 @@ a.im_message_video_thumb {
   font-size: 15px;
   float: left;
   position: relative;
-  max-width: 80%;
+  margin-left: 0;
+  margin-right: 0;
+  max-width: 100%;
 }
 .im_message_out.im_content_message_wrap {
-  margin-right: 0;
-  margin-left: 80px;
+  padding-left: 60px;
+  padding-right: 0;
   float: right;
 }
 .im_message_in.im_content_message_wrap {
-  margin-right: 65px;
-  margin-left: 0;
+  padding-left: 0;
+  padding-right: 42px;
 }
 .im_message_fwd.im_content_message_wrap {
   float: none;
@@ -531,14 +535,13 @@ a.im_message_video_thumb {
 .im_history_messages_group .im_grouped .im_message_in.im_content_message_wrap,
 .im_history_messages_group .im_grouped_fwd .im_message_in.im_content_message_wrap,
 .im_history_messages_group .im_grouped_fwd_short .im_message_in.im_content_message_wrap {
-  /*margin-top: 0;*/
-  margin-left: 45px;
+  padding-left: 45px;
 }
 .im_grouped_short .im_message_out.im_message_fwd,
 .im_grouped .im_message_out.im_message_fwd,
 .im_grouped_fwd .im_message_out.im_message_fwd,
 .im_grouped_fwd_short .im_message_out.im_message_fwd {
-  margin-left: 80px;
+  padding-left: 80px;
 }
 .im_grouped_short .im_content_message_wrap,
 .im_grouped .im_content_message_wrap {
@@ -564,14 +567,14 @@ a.im_message_video_thumb {
   float: none;
   position: absolute;
   bottom: 6px;
-  right: -44px;
+  right: 0;
 }
 .im_message_date {
   font-size: 12px;
 }
 .im_message_out .im_message_meta {
   right: auto;
-  left: -60px;
+  left: 0;
 }
 
 .im_grouped_fwd .im_message_meta,
@@ -1106,6 +1109,10 @@ a.im_message_fwd_author {
 .emoji-menu {
   margin-left: -20px;
   margin-top: -267px;
+  width: 262px;
+}
+.emoji-menu .emoji-items a {
+  padding: 5px;
 }
 
 .im_head_attach {
