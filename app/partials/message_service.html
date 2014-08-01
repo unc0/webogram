@@ -1,30 +1,30 @@
 <span ng-switch="::historyMessage.action._">
   <span ng-switch-when="messageActionChatCreate">
-    created the group &laquo;<strong ng-bind-html="::historyMessage.action.rTitle"></strong>&raquo;
+    创建群组 &laquo;<strong ng-bind-html="::historyMessage.action.rTitle"></strong>&raquo;
   </span>
   <span ng-switch-when="messageActionChatEditTitle">
-    changed group name to  &laquo;<strong ng-bind-html="::historyMessage.action.rTitle"></strong>&raquo;
+    修改群组名为： &laquo;<strong ng-bind-html="::historyMessage.action.rTitle"></strong>&raquo;
   </span>
   <span ng-switch-when="messageActionChatEditPhoto">
-    changed group photo
+    修改群图标
   </span>
   <span ng-switch-when="messageActionChatDeletePhoto">
-    removed group photo
+    删除群图标
   </span>
   <span ng-switch-when="messageActionChatAddUser" ng-switch="::historyMessage.from_id != historyMessage.action.user_id">
     <span ng-switch-when="true">
-      invited <a my-user-link="historyMessage.action.user_id" color="true"></a>
+      已邀请 <a my-user-link="historyMessage.action.user_id" color="true"></a>
     </span>
     <span ng-switch-default>
-      returned to group
+      返回群组
     </span>
   </span>
   <span ng-switch-when="messageActionChatDeleteUser" ng-switch="::historyMessage.from_id != historyMessage.action.user_id">
     <span ng-switch-when="true">
-      kicked <a my-user-link="historyMessage.action.user_id" color="true"></a>
+      已踢出 <a my-user-link="historyMessage.action.user_id" color="true"></a>
     </span>
     <span ng-switch-default>
-      left group
+      离开群组
     </span>
   </span>
 
