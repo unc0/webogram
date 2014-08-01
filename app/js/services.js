@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.2.5 - messaging web application for MTProto
+ * Webogram v0.2.8 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -161,11 +161,19 @@ angular.module('myApp.services', [])
     var scope = $rootScope.$new();
     scope.userID = userID;
 
+    var tUrl = 'partials/user_modal.html',
+        className = 'user_modal_window page_modal';
+
+    if (Config.Navigator.mobile) {
+      tUrl = 'partials/mobile/user_modal.html';
+      className += ' mobile_modal';
+    }
+
     var modalInstance = $modal.open({
-      templateUrl: 'partials/user_modal.html',
+      templateUrl: tUrl,
       controller: 'UserModalController',
       scope: scope,
-      windowClass: 'user_modal_window page_modal'
+      windowClass: className
     });
   };
   $rootScope.openUser = openUser;
@@ -493,11 +501,19 @@ angular.module('myApp.services', [])
     var scope = $rootScope.$new();
     scope.chatID = chatID;
 
+    var tUrl = 'partials/chat_modal.html',
+        className = 'chat_modal_window page_modal';
+
+    if (Config.Navigator.mobile) {
+      tUrl = 'partials/mobile/chat_modal.html';
+      className += ' mobile_modal';
+    }
+
     var modalInstance = $modal.open({
-      templateUrl: 'partials/chat_modal.html',
+      templateUrl: tUrl,
       controller: 'ChatModalController',
-      windowClass: 'chat_modal_window page_modal',
-      scope: scope
+      scope: scope,
+      windowClass: className
     });
   }
 
@@ -1790,15 +1806,18 @@ angular.module('myApp.services', [])
   }
 
   function regroupWrappedHistory (history, limit) {
+    if (!history || !history.length) {
+      return;
+    }
     var start = 0,
         len = history.length,
         end = len,
         i, curDay, prevDay, curMessage, prevMessage;
 
     if (limit > 0) {
-      end = limit;
+      end = Math.min(limit, len);
     } else if (limit < 0) {
-      start = end + limit;
+      start = Math.max(0, end + limit);
     }
 
     for (i = start; i < end; i++) {
@@ -2072,7 +2091,15 @@ angular.module('myApp.services', [])
               delete messagesForDialogs[messageID];
             }
             message.deleted = true;
-            delete messagesStorage[messageID];
+            messagesStorage[messageID] = {
+              deleted: true,
+              id: messageID,
+              from_id: message.from_id,
+              to_id: message.to_id,
+              out: message.out,
+              unread: message.unread,
+              date: message.date
+            };
           }
         }
 
@@ -3518,7 +3545,7 @@ angular.module('myApp.services', [])
     if (registeredDevice) {
       return false;
     }
-    if (navigator.push) {
+    if (navigator.push && Config.Navigator.ffos && Config.Modes.packed) {
       var req = navigator.push.register();
 
       req.onsuccess = function(e) {
@@ -3632,11 +3659,19 @@ angular.module('myApp.services', [])
       angular.extend(scope, options);
     }
 
+    var tUrl = 'partials/peer_select.html',
+        className = 'peer_select_window page_modal';
+
+    if (Config.Navigator.mobile) {
+      tUrl = 'partials/mobile/peer_select.html';
+      className += ' mobile_modal';
+    }
+
     return $modal.open({
-      templateUrl: 'partials/peer_select.html',
+      templateUrl: tUrl,
       controller: 'PeerSelectController',
       scope: scope,
-      windowClass: 'peer_select_window'
+      windowClass: className
     }).result;
   }
 
@@ -3659,11 +3694,19 @@ angular.module('myApp.services', [])
       scope.action = 'select';
     }
 
+    var tUrl = 'partials/contacts_modal.html',
+        className = 'contacts_modal_window page_modal';
+
+    if (Config.Navigator.mobile) {
+      tUrl = 'partials/mobile/contacts_modal.html';
+      className += ' mobile_modal';
+    }
+
     return $modal.open({
-      templateUrl: 'partials/contacts_modal.html',
+      templateUrl: tUrl,
       controller: 'ContactsModalController',
       scope: scope,
-      windowClass: 'contacts_modal_window page_modal'
+      windowClass: className
     }).result;
   }
 

@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.2.5 - messaging web application for MTProto
+ * Webogram v0.2.8 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -221,7 +221,7 @@ angular.module('myApp.controllers', [])
     $scope.$on('history_focus', function (e, peerData) {
       $modalStack.dismissAll();
       if (peerData.peerString == $scope.curDialog.peer && peerData.messageID == $scope.curDialog.messageID) {
-        $scope.$broadcast('ui_history_focus');
+        $scope.$broadcast(peerData.messageID ? 'ui_history_change_scroll' : 'ui_history_focus');
       } else {
         $location.url('/im?p=' + peerData.peerString + (peerData.messageID ? '&m=' + peerData.messageID : ''));
       }
@@ -236,10 +236,18 @@ angular.module('myApp.controllers', [])
     $scope.historyState = {selectActions: false, typing: []};
 
     $scope.openSettings = function () {
+      var tUrl = 'partials/settings_modal.html',
+          className = 'settings_modal_window page_modal';
+
+      if (Config.Navigator.mobile) {
+        tUrl = 'partials/mobile/settings_modal.html';
+        className += ' mobile_modal';
+      }
+
       $modal.open({
-        templateUrl: 'partials/settings_modal.html',
+        templateUrl: tUrl,
         controller: 'SettingsModalController',
-        windowClass: 'settings_modal_window page_modal'
+        windowClass: className
       });
     }
 
@@ -2130,6 +2138,10 @@ angular.module('myApp.controllers', [])
       promise.then(function () {
         $modalInstance.close(peerString);
       });
+    };
+
+    $scope.toggleSearch = function () {
+      $scope.$broadcast('dialogs_search_toggle');
     };
   })
 

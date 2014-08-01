@@ -49,9 +49,9 @@
         <div ng-show="curDialog.peer" ng-switch="curDialog.peer &amp;&amp; historyFilter.mediaType.length > 0">
           <ul ng-switch-when="true" class="nav navbar-nav navbar-quick-nav">
             <li>
-              <a ng-click="toggleMedia()" class="navbar-quick-media-back" ng-switch="historyFilter.mediaType">
+              <a ng-click="toggleMedia()" class="navbar-quick-media-back">
                 <i class="icon icon-back"></i>
-                <div class="navbar-quick-back-title">
+                <div class="navbar-quick-back-title" ng-switch="historyFilter.mediaType">
                   <h4 ng-switch-when="photos">图片</h4>
                   <h4 ng-switch-when="video">视频</h4>
                   <h4 ng-switch-when="documents">文档</h4>
