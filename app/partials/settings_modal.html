@@ -25,7 +25,7 @@
             设置头像图片
           </span>
           <span class="btn btn-primary user_modal_main_btn disabled" disabled ng-if="photo.updating">
-            正在上传<span my-loading-dots></span>
+            正在更新<span my-loading-dots></span>
           </span>
 
           <div class="dropdown user_modal_other_btn">
@@ -85,14 +85,14 @@
           <a class="tg_radio" ng-click="toggleCtrlEnter(1)" ng-class="send.enter == 1 ? 'tg_radio_on' : ''">
             <i class="icon icon-radio"></i>
             <span>
-              <strong>Enter</strong> - 发送信息，<strong>Shift + Enter</strong> - 新起一行
+              <strong>Enter</strong> - 发送消息，<strong>Shift + Enter</strong> - 新起一行
             </span>
           </a>
 
           <a class="tg_radio" ng-click="toggleCtrlEnter(0)" ng-class="send.enter == 0 ? 'tg_radio_on' : ''">
             <i class="icon icon-radio"></i>
             <span>
-              <strong>Ctrl + Enter</strong> - 发送信息，<strong>Enter</strong> - 新起一行
+              <strong>Ctrl + Enter</strong> - 发送消息，<strong>Enter</strong> - 新起一行
             </span>
           </a>
         </div>

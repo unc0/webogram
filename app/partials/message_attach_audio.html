@@ -7,7 +7,7 @@
   <div class="im_message_audio_info">
     <div class="im_message_audio_name_wrap" ng-if="!historyMessage.media.audio.url">
       <span class="im_message_audio_name">
-        语音信息
+        语音消息
       </span>
       <span class="im_message_audio_duration" ng-if="!historyMessage.media.audio.progress.enabled" ng-bind="::historyMessage.media.audio.duration | duration"></span>
       <span class="im_message_audio_size" ng-if="historyMessage.media.audio.progress.enabled" ng-bind="historyMessage.media.audio.progress | formatSizeProgress"></span>

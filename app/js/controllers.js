@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.2.8 - messaging web application for MTProto
+ * Webogram v0.2.9 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -40,10 +40,18 @@ angular.module('myApp.controllers', [])
     $scope.callPending = {};
 
     $scope.selectCountry = function () {
+      var tUrl = 'partials/country_select_modal.html',
+          className = 'countries_modal_window page_modal';
+
+      if (Config.Navigator.mobile) {
+        tUrl = 'partials/mobile/country_select_modal.html';
+        className += ' mobile_modal';
+      }
+
       var modal = $modal.open({
-        templateUrl: 'partials/country_select_modal.html',
+        templateUrl: tUrl,
         controller: 'CountrySelectModalController',
-        windowClass: 'countries_modal_window'
+        windowClass: className
       });
 
       modal.result.then(function (code) {

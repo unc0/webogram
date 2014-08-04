@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.2.8 - messaging web application for MTProto
+ * Webogram v0.2.9 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -398,7 +398,10 @@ angular.module('myApp.directives', ['myApp.filters'])
 
       function updateSizes () {
         $(element).css({
-          height: $($window).height() - (panelWrap && panelWrap.offsetHeight || 0) - (searchWrap && searchWrap.offsetHeight || 0) - 200
+          height: $($window).height()
+                    - (panelWrap && panelWrap.offsetHeight || 0)
+                    - (searchWrap && searchWrap.offsetHeight || 0)
+                    - (Config.Navigator.mobile ? 46 + 18 : 200)
         });
         $(countriesWrap).nanoScroller();
       }

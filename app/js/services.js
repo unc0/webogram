@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.2.8 - messaging web application for MTProto
+ * Webogram v0.2.9 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -339,7 +339,7 @@ angular.module('myApp.services', [])
   };
 
   function isAvailable () {
-    if (Config.Navigator.ffos && Config.Modes.packed) {
+    if (Config.Navigator.mobile && Config.Navigator.ffos && Config.Modes.packed) {
       try {
         return navigator.mozContacts && navigator.mozContacts.getAll;
       } catch (e) {
@@ -352,9 +352,9 @@ angular.module('myApp.services', [])
 
   function openPhonebookImport () {
     return $modal.open({
-      templateUrl: 'partials/phonebook_modal.html',
+      templateUrl: 'partials/mobile/phonebook_modal.html',
       controller: 'PhonebookModalController',
-      windowClass: 'phonebook_modal_window'
+      windowClass: 'phonebook_modal_window page_modal mobile_modal'
     });
   }
 

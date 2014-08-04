@@ -12,16 +12,16 @@
           </a>
           <ul class="dropdown-menu">
             <li ng-if="chatFull.thumb.location">
-              <a ng-click="deletePhoto()">Delete photo</a>
+              <a ng-click="deletePhoto()">删除群图片</a>
             </li>
             <li>
-              <a ng-click="editTitle()">Edit group</a>
+              <a ng-click="editTitle()">编辑群</a>
             </li>
             <li>
-              <a ng-click="leaveGroup()">Leave group</a>
+              <a ng-click="leaveGroup()">离开群</a>
             </li>
             <li>
-              <a ng-click="flushHistory()">Delete chat</a>
+              <a ng-click="flushHistory()">清空群聊天记录</a>
             </li>
           </ul>
         </div>
@@ -33,7 +33,7 @@
               <a ng-click="$close()" class="navbar-quick-media-back">
                 <i class="icon icon-back"></i>
                 <div class="navbar-quick-back-title">
-                  <h4>Group info</h4>
+                  <h4>群信息</h4>
                 </div>
               </a>
             </li>
@@ -60,7 +60,7 @@
         <h4 class="mobile_user_modal_header" ng-bind-html="chatFull.chat.rTitle"></h4>
         <p class="mobile_user_modal_status"  ng-if="chatFull.chat.participants_count > 0">
           <ng-pluralize count="chatFull.chat.participants_count"
-                           when="{'0': 'No members', 'one': '1 member', 'other': '{} members'}">
+                           when="{'0': '没有成员', 'one': '1 位成员', 'other': '{} 位成员'}">
           </ng-pluralize>
         </p>
       </div>
@@ -68,41 +68,41 @@
     </div>
 
     <div class="mobile_modal_action_wrap" ng-if="!chatFull.chat.left &amp;&amp; chatFull.participants.participants.length">
-      <a class="mobile_modal_action" ng-click="inviteToGroup()">Add member</a>
+      <a class="mobile_modal_action" ng-click="inviteToGroup()">添加成员</a>
     </div>
     <div class="mobile_modal_action_wrap" ng-if="chatFull.chat._ != 'chatForbidden' &amp;&amp; chatFull.chat.left">
-      <a class="mobile_modal_action" ng-click="returnToGroup()">Return to group</a>
+      <a class="mobile_modal_action" ng-click="returnToGroup()">返回群聊天</a>
     </div>
     <div class="mobile_modal_action_wrap" ng-if="chatFull.chat._ == 'chatForbidden'">
-      <a class="mobile_modal_action" ng-click="flushHistory()">Return to group</a>
+      <a class="mobile_modal_action" ng-click="flushHistory()">清空群聊天记录</a>
     </div>
     <div class="mobile_modal_action_wrap" ng-if="chatFull.chat._ != 'chatForbidden' &amp;&amp; !chatFull.chat.left &amp;&amp; !photo.updating">
       <span class="mobile_modal_action mobile_modal_upload_action">
         <input my-file-upload  type="file" multiple="false" class="im_attach_input" size="120" multiple="false" accept="image/x-png, image/png, image/gif, image/jpeg" />
-        Update photo
+        更新群图片
       </span>
     </div>
     <div class="mobile_modal_action_wrap" ng-if="photo.updating">
       <span class="mobile_modal_action">
-        Updating<span my-loading-dots></span>
+        正在更新<span my-loading-dots></span>
       </span>
     </div>
 
     <div class="mobile_modal_action_wrap">
       <a class="mobile_modal_action tg_checkbox clearfix" ng-click="settings.notifications = !settings.notifications" ng-class="settings.notifications ? 'tg_checkbox_on' : ''">
         <span class="icon icon-checkbox-outer"><i class="icon-checkbox-inner"></i></span>
-        <span class="tg_checkbox_label">Notifications</span>
+        <span class="tg_checkbox_label">提醒</span>
       </a>
     </div>
 
     <div class="mobile_modal_section">
-      <h4 class="mobile_modal_section_header">Members</h4>
+      <h4 class="mobile_modal_section_header">群成员</h4>
       <div class="mobile_modal_section_body">
 
         <div class="chat_modal_members_list">
 
           <div class="chat_modal_participant_wrap clearfix" ng-repeat="participant in chatFull.participants.participants | orderBy:'-user.sortStatus'">
-            <a ng-if="participant.canKick" ng-click="kickFromGroup(participant.user_id)"  class="chat_modal_participant_kick pull-right">Kick</a>
+            <a ng-if="participant.canKick" ng-click="kickFromGroup(participant.user_id)"  class="chat_modal_participant_kick pull-right">移除成员</a>
 
             <a class="chat_modal_participant_photo pull-left" my-user-photolink="participant.user_id" img-class="chat_modal_participant_photo" status="true"></a>
 
@@ -115,7 +115,7 @@
         </div>
 
         <div class="chat_modal_members_forbidden" ng-if="chatFull.chat._ == 'chatForbidden' || chatFull.chat.left">
-          Group members list is unavailable.
+          群成员列表暂时无法取得，请稍后重试。
         </div>
 
       </div>

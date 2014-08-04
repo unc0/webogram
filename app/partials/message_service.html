@@ -1,9 +1,9 @@
 <span ng-switch="::historyMessage.action._">
   <span ng-switch-when="messageActionChatCreate">
-    创建群组 &laquo;<strong ng-bind-html="::historyMessage.action.rTitle"></strong>&raquo;
+    创建群 &laquo;<strong ng-bind-html="::historyMessage.action.rTitle"></strong>&raquo;
   </span>
   <span ng-switch-when="messageActionChatEditTitle">
-    修改群组名为： &laquo;<strong ng-bind-html="::historyMessage.action.rTitle"></strong>&raquo;
+    修改群名为： &laquo;<strong ng-bind-html="::historyMessage.action.rTitle"></strong>&raquo;
   </span>
   <span ng-switch-when="messageActionChatEditPhoto">
     修改群图标
@@ -16,7 +16,7 @@
       已邀请 <a my-user-link="historyMessage.action.user_id" color="true"></a>
     </span>
     <span ng-switch-default>
-      返回群组
+      返回群
     </span>
   </span>
   <span ng-switch-when="messageActionChatDeleteUser" ng-switch="::historyMessage.from_id != historyMessage.action.user_id">
@@ -24,7 +24,7 @@
       已踢出 <a my-user-link="historyMessage.action.user_id" color="true"></a>
     </span>
     <span ng-switch-default>
-      离开群组
+      离开群
     </span>
   </span>
 

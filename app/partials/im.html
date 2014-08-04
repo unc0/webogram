@@ -90,7 +90,7 @@
           <button type="button" class="btn btn-primary btn-sm" ng-click="openSettings()">打开设置界面</button>
         </div>
         <div ng-switch-default class="im_history_not_selected" my-vertical-position="0.35" padding="true">
-          请选择一个聊天会话开始发信息吧
+          请选择一个聊天会话开始发消息吧
         </div>
       </div>
       <div ng-show="!state.notSelected &amp;&amp; !state.loaded" class="im_history_not_selected" my-vertical-position="0.35" padding="true">
@@ -114,7 +114,7 @@
                     <li><a ng-click="toggleMedia('photos')">图片</a></li>
                     <li><a ng-click="toggleMedia('video')">视频</a></li>
                     <li><a ng-click="toggleMedia('documents')">文档</a></li>
-                    <li><a ng-click="toggleMedia('audio')">语音信息</a></li>
+                    <li><a ng-click="toggleMedia('audio')">语音消息</a></li>
                   </ul>
                 </div>
                 <a ng-show="historyFilter.mediaType.length || skippedHistory" class="im_history_panel_return_link pull-right" ng-click="returnToRecent()" ng-switch="skippedHistory">
@@ -127,7 +127,7 @@
                   <h4 ng-switch-when="photos">图片</h4>
                   <h4 ng-switch-when="video">视频</h4>
                   <h4 ng-switch-when="documents">文档</h4>
-                  <h4 ng-switch-when="audio">语音信息</h4>
+                  <h4 ng-switch-when="audio">语音消息</h4>
 
                   <h4 ng-switch-default ng-switch="historyPeer.id > 0" ng-click="showPeerInfo()">
                     <div ng-switch-when="true">
@@ -232,7 +232,7 @@
 
                     <div class="im_send_field_wrap">
                       <div class="im_send_dropbox_wrap"> 将图片拖到此处发送 </div>
-                      <textarea ng-model="draftMessage.text" placeholder="输入信息…" class="form-control im_message_field no_outline"></textarea>
+                      <textarea ng-model="draftMessage.text" placeholder="输入消息…" class="form-control im_message_field no_outline"></textarea>
                     </div>
 
                     <div class="im_media_attach pull-right">
