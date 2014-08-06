@@ -55,7 +55,9 @@
       <span ng-switch-when="USERS_NOT_USING_TELEGRAM">
         很抱歉，您提供的电话号码并未注册 <strong>Telegram</strong> 账号。
       </span>
-
+      <span ng-switch-when="PHONEBOOK_GET_CONTACTS_FAILED">
+        Telegram need access to phonebook to import contacts.
+      </span>
 
       <div ng-switch-default ng-switch="error.code">
         <span ng-switch-when="400">一个参数未指定或缺失。</span>
