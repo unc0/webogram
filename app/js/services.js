@@ -11,12 +11,19 @@
 
 angular.module('myApp.services', [])
 
-.service('AppUsersManager', function ($rootScope, $modal, $modalStack, $filter, $q, MtpApiFileManager, MtpApiManager, RichTextProcessor, SearchIndexManager, ErrorService) {
+.service('AppUsersManager', function ($rootScope, $modal, $modalStack, $filter, $q, MtpApiFileManager, MtpApiManager, RichTextProcessor, SearchIndexManager, ErrorService, Storage) {
   var users = {},
       cachedPhotoLocations = {},
       contactsFillPromise,
       contactsList,
-      contactsIndex = SearchIndexManager.createIndex();
+      contactsIndex = SearchIndexManager.createIndex(),
+      serverTimeOffset = 0;
+
+  Storage.get('server_time_offset').then(function (to) {
+    if (to) {
+      serverTimeOffset = to;
+    }
+  });
 
   function fillContacts () {
     if (contactsFillPromise) {
@@ -150,6 +157,17 @@ angular.module('myApp.services', [])
       user_id: id,
       access_hash: user.access_hash || 0
     };
+  }
+
+  function updateUsersStatuses () {
+    var timestampNow = tsNow(true) + serverTimeOffset;
+    angular.forEach(users, function (user) {
+      if (user.status && user.status._ == 'userStatusOnline' &&
+          user.status.expires > timestampNow) {
+        user.status = {_: 'userStatusOffline', was_online: user.status.expires};
+        $rootScope.$broadcast('user_update', user.id);
+      }
+    });
   }
 
   function wrapForFull (id) {
@@ -308,6 +326,8 @@ angular.module('myApp.services', [])
         break;
     }
   });
+
+  setInterval(updateUsersStatuses, 60000);
 
 
   return {
@@ -3344,7 +3364,6 @@ var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
     $interval.cancel(titlePromise);
 
     if (!newVal) {
-      notificationsCount = 0;
       document.title = titleBackup;
       $('link[rel="icon"]').replaceWith(faviconBackupEl);
       notificationsClear();
@@ -3555,11 +3574,15 @@ var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
   function notificationCancel (key) {
     var notification = notificationsShown[key];
     if (notification) {
+      if (notificationsCount > 0) {
+        notificationsCount--;
+      }
       try {
         if (notification.close) {
           notification.close();
         }
       } catch (e) {}
+      delete notificationsCount[key];
     }
   }
 
@@ -3572,6 +3595,7 @@ var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
       } catch (e) {}
     });
     notificationsShown = {};
+    notificationsCount = 0;
   }
 
   function registerDevice () {
@@ -3764,7 +3788,6 @@ var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
     if (typeof ver2 !== 'string') {
       ver2 = '';
     }
-    // console.log('ss', ver1, ver2);
     ver1 = ver1.replace(/^\s+|\s+$/g, '').split('.');
     ver2 = ver2.replace(/^\s+|\s+$/g, '').split('.');
 
