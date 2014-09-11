@@ -34,6 +34,10 @@
         <span ng-switch-when="true" ng-bind-html="peer_data.rFullName"></span>
         <span ng-switch-default ng-bind-html="peer_data.rTitle"></span>
       </strong>？</span>
+      <span ng-switch-when="EXT_SHARE_PEER">分享给 <strong ng-switch="peer_id > 0">
+        <span ng-switch-when="true" ng-bind-html="peer_data.rFullName"></span>
+        <span ng-switch-default ng-bind-html="peer_data.rTitle"></span>
+      </strong>？</span>
       <span ng-switch-default ng-bind="message || '你确定？'"></span>
     </div>
 
@@ -53,6 +57,7 @@
       <span ng-switch-when="PHOTO_SHARE_PEER">转发照片</span>
       <span ng-switch-when="VIDEO_SHARE_PEER">转发视频</span>
       <span ng-switch-when="SHARE_CONTACT_PEER">发送联系人</span>
+      <span ng-switch-when="EXT_SHARE_PEER">分享文件</span>
       <span ng-switch-default>确定</span>
     </button>
   </div>

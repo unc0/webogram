@@ -351,8 +351,6 @@ angular.module('myApp.services', [])
 
 .service('PhonebookContactsService', function ($q, $modal, $sce, FileManager) {
 
-  var phonebookContactsPromise;
-
   return {
     isAvailable: isAvailable,
     openPhonebookImport: openPhonebookImport,
@@ -380,10 +378,6 @@ angular.module('myApp.services', [])
   }
 
   function getPhonebookContacts () {
-    if (phonebookContactsPromise) {
-      return phonebookContactsPromise;
-    }
-
     try {
       var request = window.navigator.mozContacts.getAll({});
     } catch (e) {
@@ -435,7 +429,7 @@ angular.module('myApp.services', [])
       deferred.reject(e);
     }
 
-    return phonebookContactsPromise = deferred.promise;
+    return deferred.promise;
   }
 
 })
@@ -725,7 +719,7 @@ angular.module('myApp.services', [])
   }
 })
 
-.service('AppMessagesManager', function ($q, $rootScope, $location, $filter, ApiUpdatesManager, AppUsersManager, AppChatsManager, AppPeersManager, AppPhotosManager, AppVideoManager, AppDocsManager, AppAudioManager, MtpApiManager, MtpApiFileManager, RichTextProcessor, NotificationsManager, SearchIndexManager, Storage) {
+.service('AppMessagesManager', function ($q, $rootScope, $location, $filter, ApiUpdatesManager, AppUsersManager, AppChatsManager, AppPeersManager, AppPhotosManager, AppVideoManager, AppDocsManager, AppAudioManager, MtpApiManager, MtpApiFileManager, RichTextProcessor, NotificationsManager, SearchIndexManager, PeersSelectService,Storage) {
 
   var messagesStorage = {};
   var messagesForHistory = {};
@@ -1904,7 +1898,7 @@ angular.module('myApp.services', [])
         notificationPhoto;
 
     if (message.message) {
-      notificationMessage = message.message;
+      notificationMessage = RichTextProcessor.wrapPlainText(message.message);
     } else if (message.media && message.media._ != 'messageMediaEmpty') {
       switch (message.media._) {
         case 'messageMediaPhoto': notificationMessage = 'Photo'; break;
@@ -1945,6 +1939,8 @@ angular.module('myApp.services', [])
       peerString = AppChatsManager.getChatString(-peerID);
     }
 
+    notification.title = RichTextProcessor.wrapPlainText(notification.title);
+
     notification.onclick = function () {
       $rootScope.$broadcast('history_focus', {peerString: peerString});
     };
@@ -1965,6 +1961,23 @@ angular.module('myApp.services', [])
     } else {
       NotificationsManager.notify(notification);
     }
+  }
+
+  if (window.navigator.mozSetMessageHandler) {
+    window.navigator.mozSetMessageHandler('activity', function(activityRequest) {
+      var source = activityRequest.source;
+      console.log(dT(), 'Received activity', source.name, source.data);
+
+      if (source.name === 'share' && source.data.blobs.length > 0) {
+        PeersSelectService.selectPeer({confirm_type: 'EXT_SHARE_PEER'}).then(function (peerString) {
+          var peerID = AppPeersManager.getPeerID(peerString);
+          angular.forEach(source.data.blobs, function (blob) {
+            sendFile(peerID, blob, {isMedia: true});
+          });
+          $rootScope.$broadcast('history_focus', {peerString: peerString});
+        });
+      }
+    });
   }
 
   $rootScope.$on('apiUpdate', function (e, update) {
@@ -3063,6 +3076,7 @@ angular.module('myApp.services', [])
       emojiMap = {},
       emojiData = Config.Emoji,
       emojiIconSize = 18,
+      emojiSupported = navigator.userAgent.search(/OS X|iPhone|iPad|iOS|Android/i) != -1,
       emojiCode;
 
   for (emojiCode in emojiData) {
@@ -3095,13 +3109,14 @@ angular.module('myApp.services', [])
                         "\\uff21-\\uff3a\\uff41-\\uff5a" +  // full width Alphabet
                         "\\uff66-\\uff9f" +                 // half width Katakana
                         "\\uffa1-\\uffdc";                  // half width Hangul (Korean)
-var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
 
+  var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
   var regExp = new RegExp('((?:(ftp|https?)://|(?:mailto:)?([A-Za-z0-9._%+-]+@))(\\S*\\.\\S*[^\\s.;,(){}<>"\']))|(\\n)|(' + emojiUtf.join('|') + ')|(^|\\s)(#[' + regexAlphaNumericChars + ']{3,20})', 'i');
   var youtubeRegex = /(?:https?:\/\/)?(?:www\.)?youtu(?:|.be|be.com|.b)(?:\/v\/|\/watch\\?v=|e\/|\/watch(?:.+)v=)(.{11})(?:\&[^\s]*)?/;
 
   return {
-    wrapRichText: wrapRichText
+    wrapRichText: wrapRichText,
+    wrapPlainText: wrapPlainText
   };
 
   function encodeEntities(value) {
@@ -3249,6 +3264,43 @@ var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
     return $sce.trustAs('html', text);
   }
 
+  function wrapPlainText (text, options) {
+    if (emojiSupported) {
+      return text;
+    }
+    if (!text || !text.length) {
+      return '';
+    }
+
+    options = options || {};
+
+    text = text.replace(/\ufe0f/g, '', text);
+
+    var match,
+        raw = text,
+        text = [],
+        emojiTitle;
+
+    while ((match = raw.match(regExp))) {
+      text.push(raw.substr(0, match.index));
+
+      if (match[6]) {
+        if ((emojiCode = emojiMap[match[6]]) &&
+            (emojiTitle = emojiData[emojiCode][1][0])) {
+          text.push(':' + emojiTitle + ':');
+        } else {
+          text.push(match[0]);
+        }
+      } else {
+        text.push(match[0]);
+      }
+      raw = raw.substr(match.index + match[0].length);
+    }
+    text.push(raw);
+
+    return text.join('');
+  }
+
 })
 
 
@@ -3348,10 +3400,13 @@ var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
 
 .service('NotificationsManager', function ($rootScope, $window, $timeout, $interval, $q, MtpApiManager, AppPeersManager, IdleManager, Storage) {
 
+  navigator.vibrate = navigator.vibrate || navigator.mozVibrate || navigator.webkitVibrate;
+
   var notificationsUiSupport = ('Notification' in window) || ('mozNotification' in navigator);
   var notificationsShown = {};
   var notificationIndex = 0;
   var notificationsCount = 0;
+  var vibrateSupport = !!navigator.vibrate;
   var peerSettings = {};
   var faviconBackupEl = $('link[rel="icon"]'),
       faviconNewEl = $('<link rel="icon" href="favicon_unread.ico" type="image/x-icon" />');
@@ -3424,6 +3479,7 @@ var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
     getPeerMuted: getPeerMuted,
     savePeerSettings: savePeerSettings,
     updatePeerSettings: updatePeerSettings,
+    getVibrateSupport: getVibrateSupport,
     testSound: playSound
   };
 
@@ -3489,10 +3545,7 @@ var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
   }
 
   function notify (data) {
-    // console.log('notify', $rootScope.idle.isIDLE, notificationsUiSupport);
-    if (!$rootScope.idle.isIDLE) {
-      return false;
-    }
+    console.log('notify', $rootScope.idle.isIDLE, notificationsUiSupport);
 
     // FFOS Notification blob src bug workaround
     if (Config.Navigator.ffos) {
@@ -3512,8 +3565,13 @@ var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
       }
     })
 
-    Storage.get('notify_nodesktop').then(function (noShow) {
-      if (noShow) {
+
+    Storage.get('notify_nodesktop', 'notify_novibrate').then(function (settings) {
+      if (settings[0]) {
+        if (vibrateSupport && !settings[1]) {
+          navigator.vibrate([200, 100, 200]);
+          return;
+        }
         return;
       }
       var idx = ++notificationIndex,
@@ -3558,6 +3616,9 @@ var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
         notificationsClear();
       };
 
+      if (notification.show) {
+        notification.show();
+      }
       notificationsShown[key] = notification;
     });
   };
@@ -3598,6 +3659,8 @@ var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
     notificationsCount = 0;
   }
 
+  var registerDevicePeriod = 1000,
+      registerDeviceTO;
   function registerDevice () {
     if (registeredDevice) {
       return false;
@@ -3606,6 +3669,8 @@ var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
       var req = navigator.push.register();
 
       req.onsuccess = function(e) {
+        clearTimeout(registerDeviceTO);
+        console.log(dT(), 'Push registered', req.result);
         registeredDevice = req.result;
         MtpApiManager.invokeApi('account.registerDevice', {
           token_type: 4,
@@ -3619,7 +3684,9 @@ var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
       }
 
       req.onerror = function(e) {
-        console.error('Push register error', e);
+        console.error('Push register error', e, e.toString());
+        registerDeviceTO = setTimeout(registerDevice, registerDevicePeriod);
+        registerDevicePeriod = Math.min(30000, registerDevicePeriod * 1.5);
       }
     }
   }
@@ -3634,6 +3701,10 @@ var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
     }).then(function () {
       registeredDevice = false;
     })
+  }
+
+  function getVibrateSupport () {
+    return vibrateSupport;
   }
 
 })
