@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.2.9 - messaging web application for MTProto
+ * Webogram v0.3.0 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -1915,8 +1915,12 @@ angular.module('myApp.services', [])
         case 'messageActionChatEditTitle': notificationMessage = 'changed group name'; break;
         case 'messageActionChatEditPhoto': notificationMessage = 'changed group photo'; break;
         case 'messageActionChatDeletePhoto': notificationMessage = 'removed group photo'; break;
-        case 'messageActionChatAddUser': notificationMessage = 'invited user'; break;
-        case 'messageActionChatDeleteUser': notificationMessage = 'kicked user'; break;
+        case 'messageActionChatAddUser':
+          notificationMessage = message.action.user_id == message.from_id ? 'returned to group' : 'invited user';
+          break;
+        case 'messageActionChatDeleteUser':
+          notificationMessage = message.action.user_id == message.from_id ? 'left group' : 'kicked user';
+          break;
       }
     }
 

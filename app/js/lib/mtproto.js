@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.2.9 - messaging web application for MTProto
+ * Webogram v0.3.0 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -711,7 +711,7 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
     var serializer = new TLSerialization(options);
 
     if (!this.connectionInited) {
-      serializer.storeInt(0xb4418b64, 'invokeWithLayer15');
+      serializer.storeInt(0xcf5f0987, 'invokeWithLayer16');
       serializer.storeInt(0x69796de9, 'initConnection');
       serializer.storeInt(Config.App.id, 'api_id');
       serializer.storeString(navigator.userAgent || 'Unknown UserAgent', 'device_model');
