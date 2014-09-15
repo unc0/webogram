@@ -163,11 +163,19 @@ angular.module('myApp.services', [])
     var timestampNow = tsNow(true) + serverTimeOffset;
     angular.forEach(users, function (user) {
       if (user.status && user.status._ == 'userStatusOnline' &&
-          user.status.expires > timestampNow) {
+          user.status.expires < timestampNow) {
         user.status = {_: 'userStatusOffline', was_online: user.status.expires};
         $rootScope.$broadcast('user_update', user.id);
       }
     });
+  }
+
+  function forceUserOnline (id) {
+    var user = getUser(id);
+    if (user && (!user.status || user.status._ != 'userStatusOnline')) {
+      user.status = {_: 'userStatusOnline', expires: tsNow(true) + serverTimeOffset + 60};
+      $rootScope.$broadcast('user_update', id);
+    }
   }
 
   function wrapForFull (id) {
@@ -311,6 +319,7 @@ angular.module('myApp.services', [])
       case 'updateUserPhoto':
         var userID = update.user_id;
         if (users[userID]) {
+          forceUserOnline(userID);
           safeReplaceObject(users[userID].photo, update.photo);
 
           if (cachedPhotoLocations[userID] !== undefined) {
@@ -336,6 +345,7 @@ angular.module('myApp.services', [])
     saveApiUser: saveApiUser,
     getUser: getUser,
     getUserInput: getUserInput,
+    forceUserOnline: forceUserOnline,
     getUserPhoto: getUserPhoto,
     getUserString: getUserString,
     getUserSearchText: getUserSearchText,
@@ -750,6 +760,8 @@ angular.module('myApp.services', [])
     }
   });
 
+  var dateOrTimeFilter = $filter('dateOrTime');
+
   midnightOffseted.setHours(0);
   midnightOffseted.setMinutes(0);
   midnightOffseted.setSeconds(0);
@@ -891,7 +903,7 @@ angular.module('myApp.services', [])
     });
   };
 
-  function getHistory (inputPeer, maxID, limit, backLimit) {
+  function getHistory (inputPeer, maxID, limit, backLimit, prerendered) {
     var peerID = AppPeersManager.getPeerID(inputPeer),
         historyStorage = historiesStorage[peerID],
         offset = 0,
@@ -899,6 +911,8 @@ angular.module('myApp.services', [])
         unreadOffset = false,
         unreadSkip = false,
         resultPending = [];
+
+    prerendered = prerendered ? Math.min(50, prerendered) : 0;
 
     if (historyStorage === undefined) {
       historyStorage = historiesStorage[peerID] = {count: null, history: [], pending: []};
@@ -916,7 +930,7 @@ angular.module('myApp.services', [])
           unreadOffset = 6;
           offset = unreadCount - unreadOffset;
         } else {
-          limit = Math.max(10, unreadCount + 2);
+          limit = Math.max(10, prerendered, unreadCount + 2);
           unreadOffset = unreadCount;
         }
       }
@@ -940,9 +954,8 @@ angular.module('myApp.services', [])
         offset = Math.max(0, offset - backLimit);
         limit += backLimit;
       } else {
-        limit = limit || (offset ? 20 : 5);
+        limit = limit || (offset ? 20 : (prerendered || 5));
       }
-
       return $q.when({
         count: historyStorage.count,
         history: resultPending.concat(historyStorage.history.slice(offset, offset + limit)),
@@ -952,12 +965,11 @@ angular.module('myApp.services', [])
     }
 
     if (!backLimit && !limit) {
-      limit = 20;
+      limit = prerendered || 20;
     }
     if (offsetNotFound) {
       offset = 0;
     }
-
     if (backLimit || unreadSkip || maxID && historyStorage.history.indexOf(maxID) == -1) {
       if (backLimit) {
         offset = -backLimit;
@@ -1193,6 +1205,7 @@ angular.module('myApp.services', [])
         // console.log('done read history', peerID);
         foundDialog[0].unread_count = 0;
         $rootScope.$broadcast('dialog_unread', {peerID: peerID, count: 0});
+        $rootScope.$broadcast('messages_read');
       }
     })['finally'](function () {
       delete historyStorage.readPromise;
@@ -1302,6 +1315,7 @@ angular.module('myApp.services', [])
             delete historyMessage.error;
           }
         }
+        $rootScope.$broadcast('messages_pending');
       }
 
       message.send = function () {
@@ -1426,6 +1440,7 @@ angular.module('myApp.services', [])
             delete historyMessage.error;
           }
         }
+        $rootScope.$broadcast('messages_pending');
       }
 
       message.send = function () {
@@ -1567,6 +1582,7 @@ angular.module('myApp.services', [])
             delete historyMessage.error;
           }
         }
+        $rootScope.$broadcast('messages_pending');
       }
 
       message.send = function () {
@@ -1705,6 +1721,8 @@ angular.module('myApp.services', [])
         delete historyMessage.error;
         delete historyMessage.random_id;
         delete historyMessage.send;
+
+        $rootScope.$broadcast('messages_pending');
       }
 
       delete messagesForHistory[tempID];
@@ -1728,7 +1746,9 @@ angular.module('myApp.services', [])
   }
 
   function wrapForDialog (msgID, unreadCount) {
-    if (messagesForDialogs[msgID] !== undefined) {
+    var useCache = unreadCount != -1;
+
+    if (useCache && messagesForDialogs[msgID] !== undefined) {
       return messagesForDialogs[msgID];
     }
 
@@ -1757,10 +1777,13 @@ angular.module('myApp.services', [])
       message.richMessage = RichTextProcessor.wrapRichText(message.message.substr(0, 64), {noLinks: true, noLinebreaks: true});
     }
 
-    message.dateText = $filter('dateOrTime')(message.date);
+    message.dateText = dateOrTimeFilter(message.date);
 
+    if (useCache) {
+      messagesForDialogs[msgID] = message;
+    }
 
-    return messagesForDialogs[msgID] = message;
+    return message;
   }
 
   function wrapForHistory (msgID) {
@@ -1822,12 +1845,13 @@ angular.module('myApp.services', [])
 
   function regroupWrappedHistory (history, limit) {
     if (!history || !history.length) {
-      return;
+      return false;
     }
     var start = 0,
         len = history.length,
         end = len,
-        i, curDay, prevDay, curMessage, prevMessage;
+        i, curDay, prevDay, curMessage, prevMessage, curGrouped, prevGrouped,
+        wasUpdated = false;
 
     if (limit > 0) {
       end = Math.min(limit, len);
@@ -1839,10 +1863,19 @@ angular.module('myApp.services', [])
       curMessage = history[i];
       curDay = Math.floor((curMessage.date + midnightOffset) / 86400);
 
+      prevGrouped = prevMessage && prevMessage.grouped;
+      curGrouped = curMessage.grouped;
+
       if (curDay === prevDay) {
-        delete curMessage.needDate;
+        if (curMessage.needDate) {
+          delete curMessage.needDate;
+          wasUpdated = true;
+        }
       } else if (!i || prevMessage) {
-        curMessage.needDate = true;
+        if (!curMessage.needDate) {
+          curMessage.needDate = true;
+          wasUpdated = true;
+        }
       }
 
       if (prevMessage &&
@@ -1873,9 +1906,17 @@ angular.module('myApp.services', [])
           prevMessage.grouped += ' im_grouped_fwd_end';
         }
       }
+      if (!wasUpdated && prevGrouped != (prevMessage && prevMessage.grouped)) {
+        wasUpdated = true;
+      }
       prevMessage = curMessage;
       prevDay = curDay;
     }
+    if (!wasUpdated && curGrouped != (prevMessage && prevMessage.grouped)) {
+      wasUpdated = true;
+    }
+
+    return wasUpdated;
   }
 
   function getDialogByPeerID (peerID) {
@@ -1998,6 +2039,10 @@ angular.module('myApp.services', [])
             peerID = getMessagePeer(message),
             historyStorage = historiesStorage[peerID];
 
+        if (!message.out) {
+          AppUsersManager.forceUserOnline(message.from_id);
+        }
+
         if (historyStorage !== undefined) {
           var topMsgID = historiesStorage[peerID].history[0];
           if (historiesStorage[peerID].history.indexOf(message.id) != -1) {
@@ -2058,9 +2103,8 @@ angular.module('myApp.services', [])
         $rootScope.$broadcast('dialogs_update', dialog);
 
 
-        if ((Config.Navigator.mobile && $rootScope.selectedPeerID != peerID || $rootScope.idle.isIDLE) &&
-            !message.out &&
-            message.unread) {
+        if (($rootScope.idle.isIDLE || Config.Mobile && $rootScope.selectedPeerID != peerID) &&
+            !message.out && message.unread) {
           NotificationsManager.getPeerMuted(peerID).then(function (muted) {
             if (!message.unread || muted) {
               return;
@@ -2072,7 +2116,8 @@ angular.module('myApp.services', [])
 
       case 'updateReadMessages':
         var dialogsUpdated = {},
-            messageID, message, i, peerID, foundDialog, dialog;
+            messageID, message, i, peerID, foundDialog, dialog,
+            foundAffected = false;
         for (i = 0; i < update.messages.length; i++) {
           messageID = update.messages[i];
           message = messagesStorage[messageID];
@@ -2081,6 +2126,9 @@ angular.module('myApp.services', [])
             message.unread = false;
             if (messagesForHistory[messageID]) {
               messagesForHistory[messageID].unread = false;
+              if (!foundAffected) {
+                foundAffected = true;
+              }
             }
             if (messagesForDialogs[messageID]) {
               messagesForDialogs[messageID].unread = false;
@@ -2094,12 +2142,18 @@ angular.module('myApp.services', [])
 
               NotificationsManager.cancel('msg' + messageID);
             }
+            else if (peerID > 0) {
+              AppUsersManager.forceUserOnline(peerID);
+            }
           }
         }
 
         angular.forEach(dialogsUpdated, function(count, peerID) {
           $rootScope.$broadcast('dialog_unread', {peerID: peerID, count: count});
         });
+        if (foundAffected) {
+          $rootScope.$broadcast('messages_read');
+        }
         break;
 
       case 'updateDeleteMessages':
@@ -2517,7 +2571,6 @@ angular.module('myApp.services', [])
         full.width = fullWidth;
       }
     }
-    // console.log(222, video.w, video.h, full.width, full.height);
 
     video.full = full;
     video.fullThumb = angular.copy(video.thumb);
@@ -3549,7 +3602,7 @@ angular.module('myApp.services', [])
   }
 
   function notify (data) {
-    console.log('notify', $rootScope.idle.isIDLE, notificationsUiSupport);
+    // console.log('notify', $rootScope.idle.isIDLE, notificationsUiSupport);
 
     // FFOS Notification blob src bug workaround
     if (Config.Navigator.ffos) {
