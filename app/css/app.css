@@ -203,6 +203,7 @@ input[type="number"] {
 .tg_head_logo {
   background: url(../img/T_LogoM.png) 0 0 no-repeat;
   background-size: 143px 30px;
+  -webkit-app-region: drag;
   display: inline-block;
   width: 143px;
   height: 30px;
@@ -2684,4 +2685,12 @@ ce671b orange
 }
 .changelog_version_changes_list li {
   line-height: 20px;
+}
+
+/* node-webkit drag */
+.tg_page_head .container {
+  -webkit-app-region: drag !important;
+}
+.tg_page_head .navbar-nav {
+  -webkit-app-region: no-drag !important;
 }

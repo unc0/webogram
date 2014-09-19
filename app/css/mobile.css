@@ -1212,3 +1212,12 @@ a.mobile_modal_action .tg_checkbox_label {
 .countries_scrollable_wrap a.countries_modal_country {
   padding: 8px 8px;
 }
+
+
+/* fix app-region drag */
+.navbar-toggle-wrap, .navbar-search-wrap, .navbar-peer-wrap {
+  -webkit-app-region: no-drag !important;
+}
+.tg_page_head .navbar-quick-nav {
+  display: inline-block !important;
+}

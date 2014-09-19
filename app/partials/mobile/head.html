@@ -22,6 +22,8 @@
           <li ng-if="!isEmpty.contacts"><a ng-click="openContacts()" my-i18n="head_contacts"></a></li>
           <li><a ng-click="openSettings()" my-i18n="head_settings"></a></li>
           <li><a ng-click="logOut()" my-i18n="head_log_out"></a></li>
+          <li><a ng-click="hideWindow()" my-i18n="minimize"></a></li>
+          <li><a ng-click="closeWindow()" my-i18n="quit"></a></li>
         </ul>
         <ul ng-if="curDialog.peer &amp;&amp; isLoggedIn" class="dropdown-menu">
           <li><a ng-click="toggleEdit()" my-i18n="head_edit_messages"></a></li>
@@ -32,7 +34,7 @@
           <li ng-if="!historyFilter.mediaType"><a ng-click="toggleMedia('audio')" my-i18n="head_media_audio"></a></li>
         </ul>
         <ul ng-if="!isLoggedIn" class="dropdown-menu">
-          <li><a href="https://github.com/zhukov/webogram" target="_blank" my-i18n="head_about"></a></li>
+          <li><a href="https://github.com/zhukov/webogram" class="js-external-link" my-i18n="head_about"></a></li>
         </ul>
       </div>
 

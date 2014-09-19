@@ -29,6 +29,75 @@
   <meta property="og:site_name" content="Webogram">
   <meta property="og:description" content="Welcome to an experimental web-client of Telegram messenger. See https://github.com/zhukov/webogram for more info.">
 
+  <script type="text/javascript">
+    var Webogram = window.Webogram = global.Webogram = {
+
+      gui: require('nw.gui'),
+      Window: require('nw.gui').Window.get(),
+      openWindow: require('nw.gui').Window.open,
+
+      PLATFORM_WINDOWS: process.platform === 'win32',
+      PLATFORM_MAC: process.platform === 'darwin',
+      PLATFORM_LINUX: process.platform === 'linux'
+
+    };
+
+    //Tray icon
+    var trayOptions = {
+      icon: 'img/icons/icon16.png', //Relative to package.json file
+      title: 'Webogram'
+    };
+
+    var tray_icon = new Webogram.gui.Tray(trayOptions);
+
+    //Tray Icon Right Click Menu
+    var tray_menu = new Webogram.gui.Menu();
+
+    tray_menu.append(new Webogram.gui.MenuItem({
+      label: 'Show',
+      click: function () {
+        Webogram.Window.show();
+        Webogram.Window.focus();
+      }
+    }));
+
+    tray_menu.append(new Webogram.gui.MenuItem({
+      label: 'Hide',
+      click: function () {
+        Webogram.Window.hide();
+      }
+    }));
+
+    tray_menu.append(new Webogram.gui.MenuItem({
+      label: 'Exit',
+      click: function () {
+        Webogram.Window.close();
+      }
+    }));
+
+    tray_icon.menu = tray_menu;
+    tray_icon.on('click', function () {
+      Webogram.Window.show();
+      Webogram.Window.focus();
+    });
+
+    //Push tray icon to global window to tell garbage collector that tray icon is not garbage
+    Webogram._trayIcon = tray_icon;
+
+    if (Webogram.PLATFORM_WINDOWS) {
+      Webogram.Window.on('minimize', function () {
+        Webogram.Window.hide();
+      });
+    }
+
+    //Devtools for developers
+    //Allow anyone to open dev tools for error reporting
+    window.addEventListener('keydown', function (e) {
+      if (e.keyIdentifier === 'F12') {
+        Webogram.Window.showDevTools();
+      }
+    });
+  </script>
 </head>
 <body>
 
@@ -77,6 +146,14 @@
   <script type="text/javascript" src="js/directives.js"></script>
   <script type="text/javascript" src="js/directives_mobile.js"></script>
   <!-- endbuild -->
-
+<script type="text/javascript">
+  // Open links in default $BROWSER
+  $(document).ready(function(){
+    $(document).on('click', ".js-external-link", function(event) {
+      Webogram.gui.Shell.openExternal($(this).attr('href'));
+      event.preventDefault();
+    });
+  });
+</script>
 </body>
 </html>

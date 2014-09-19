@@ -3221,7 +3221,7 @@ angular.module('myApp.services', ['myApp.i18n'])
             html.push(
               '<a href="',
               encodeEntities('mailto:' + match[3] + match[4]),
-              '" target="_blank">',
+              '" class="js-external-link">',
               encodeEntities(match[3] + match[4]),
               '</a>'
             );
@@ -3229,7 +3229,7 @@ angular.module('myApp.services', ['myApp.i18n'])
             html.push(
               '<a href="',
               encodeEntities(match[2] + '://' + match[4]),
-              '" target="_blank">',
+              '" class="js-external-link">',
               encodeEntities(match[2] + '://' + match[4]),
               '</a>'
             );
