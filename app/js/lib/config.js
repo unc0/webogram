@@ -51,7 +51,8 @@ Config.I18n = {
     'zh-cn': '简体中文'
   },
   aliases: {
-    'en': 'en-us'
+    'en': 'en-us',
+    'de': 'de-de'
   },
   messages: {},
   fallback_messages: {}
