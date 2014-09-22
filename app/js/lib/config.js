@@ -43,11 +43,12 @@ Config.Navigator = {
 
 Config.I18n = {
   locale: 'en-us',
-  supported: ['en-us', 'es-es', 'de-de'],
+  supported: ['en-us', 'es-es', 'de-de', 'zh-cn'],
   languages: {
     'en-us': 'English',
     'de-de': 'Deutsch',
-    'es-es': 'Español'
+    'es-es': 'Español',
+    'zh-cn': '简体中文'
   },
   aliases: {
     'en': 'en-us'
