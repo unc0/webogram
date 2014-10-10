@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.0 - messaging web application for MTProto
+ * Webogram v0.3.1 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -424,7 +424,7 @@ angular.module('myApp.services', ['myApp.i18n'])
         return;
       }
 
-      this.continue();
+      this['continue']();
     }
 
     request.onerror = function (e) {
@@ -437,7 +437,7 @@ angular.module('myApp.services', ['myApp.i18n'])
 
 })
 
-.service('AppChatsManager', function ($rootScope, $modal, MtpApiFileManager, MtpApiManager, AppUsersManager, RichTextProcessor) {
+.service('AppChatsManager', function ($rootScope, $modal, _, MtpApiFileManager, MtpApiManager, AppUsersManager, RichTextProcessor) {
   var chats = {},
       cachedPhotoLocations = {};
 
@@ -1143,7 +1143,8 @@ angular.module('myApp.services', ['myApp.i18n'])
     return MtpApiManager.invokeApi(method, {
       peer: inputPeer,
       offset: affectedHistory.offset,
-      max_id: 0
+      max_id: 0,
+      read_contents: true
     }).then(function (affectedHistory) {
       return processAffectedHistory(inputPeer, affectedHistory, method);
     });
@@ -1185,7 +1186,8 @@ angular.module('myApp.services', ['myApp.i18n'])
     historyStorage.readPromise = MtpApiManager.invokeApi('messages.readHistory', {
       peer: inputPeer,
       offset: 0,
-      max_id: 0
+      max_id: 0,
+      read_contents: true
     }).then(function (affectedHistory) {
       return processAffectedHistory(inputPeer, affectedHistory, 'messages.readHistory');
     }).then(function () {
@@ -1241,6 +1243,8 @@ angular.module('myApp.services', ['myApp.i18n'])
 
   function saveMessages (apiMessages) {
     angular.forEach(apiMessages, function (apiMessage) {
+      apiMessage.unread = apiMessage.flags & 1 ? true : false;
+      apiMessage.out = apiMessage.flags & 2 ? true : false;
       messagesStorage[apiMessage.id] = apiMessage;
 
       apiMessage.date -= serverTimeOffset;
@@ -1281,8 +1285,7 @@ angular.module('myApp.services', ['myApp.i18n'])
         id: messageID,
         from_id: fromID,
         to_id: AppPeersManager.getOutputPeer(peerID),
-        out: true,
-        unread: true,
+        flags: 3,
         date: tsNow(true) + serverTimeOffset,
         message: text,
         media: {_: 'messageMediaEmpty'},
@@ -1406,8 +1409,7 @@ angular.module('myApp.services', ['myApp.i18n'])
         id: messageID,
         from_id: fromID,
         to_id: AppPeersManager.getOutputPeer(peerID),
-        out: true,
-        unread: true,
+        flags: 3,
         date: tsNow(true) + serverTimeOffset,
         message: '',
         media: media,
@@ -1548,8 +1550,7 @@ angular.module('myApp.services', ['myApp.i18n'])
         id: messageID,
         from_id: fromID,
         to_id: AppPeersManager.getOutputPeer(peerID),
-        out: true,
-        unread: true,
+        flags: 3,
         date: tsNow(true) + serverTimeOffset,
         message: '',
         media: media,
@@ -1727,7 +1728,7 @@ angular.module('myApp.services', ['myApp.i18n'])
 
     if (toID < 0) {
       return toID;
-    } else if (message.out) {
+    } else if (message.out || message.flags & 2) {
       return toID;
     }
     return message.from_id;
@@ -1809,6 +1810,9 @@ angular.module('myApp.services', ['myApp.i18n'])
             {noLinks: true, noLinebreaks: true}
           );
           break;
+
+        case 'messageMediaEmpty':
+          delete message.media;
       }
     }
     else if (message.action) {
@@ -1839,7 +1843,8 @@ angular.module('myApp.services', ['myApp.i18n'])
         len = history.length,
         end = len,
         i, curDay, prevDay, curMessage, prevMessage, curGrouped, prevGrouped,
-        wasUpdated = false;
+        wasUpdated = false,
+        groupFwd = !Config.Mobile;
 
     if (limit > 0) {
       end = Math.min(limit, len);
@@ -1874,12 +1879,12 @@ angular.module('myApp.services', ['myApp.i18n'])
           curMessage.date < prevMessage.date + 900) {
 
         var singleLine = curMessage.message && curMessage.message.length < 70 && curMessage.message.indexOf("\n") == -1;
-        if (curMessage.fwd_from_id && curMessage.fwd_from_id == prevMessage.fwd_from_id) {
+        if (groupFwd && curMessage.fwd_from_id && curMessage.fwd_from_id == prevMessage.fwd_from_id) {
           curMessage.grouped = singleLine ? 'im_grouped_fwd_short' : 'im_grouped_fwd';
         } else {
           curMessage.grouped = !curMessage.fwd_from_id && singleLine ? 'im_grouped_short' : 'im_grouped';
         }
-        if (curMessage.fwd_from_id) {
+        if (groupFwd && curMessage.fwd_from_id) {
           if (!prevMessage.grouped) {
             prevMessage.grouped = 'im_grouped_fwd_start';
           }
@@ -1890,7 +1895,7 @@ angular.module('myApp.services', ['myApp.i18n'])
       } else if (prevMessage || !i) {
         delete curMessage.grouped;
 
-        if (prevMessage && prevMessage.grouped && prevMessage.fwd_from_id) {
+        if (groupFwd && prevMessage && prevMessage.grouped && prevMessage.fwd_from_id) {
           prevMessage.grouped += ' im_grouped_fwd_end';
         }
       }
@@ -1930,25 +1935,25 @@ angular.module('myApp.services', ['myApp.i18n'])
       notificationMessage = RichTextProcessor.wrapPlainText(message.message);
     } else if (message.media && message.media._ != 'messageMediaEmpty') {
       switch (message.media._) {
-        case 'messageMediaPhoto': notificationMessage = _('conversation_media_photo'); break;
-        case 'messageMediaVideo': notificationMessage = _('conversation_media_video'); break;
-        case 'messageMediaDocument': notificationMessage = _('conversation_media_document'); break;
-        case 'messageMediaAudio': notificationMessage = _('conversation_media_audio'); break;
-        case 'messageMediaGeo': notificationMessage = _('conversation_media_location'); break;
-        case 'messageMediaContact': notificationMessage = _('conversation_media_contact'); break;
-        default: notificationMessage = _('conversation_media_attachment'); break;
+        case 'messageMediaPhoto': notificationMessage = _('conversation_media_photo_raw'); break;
+        case 'messageMediaVideo': notificationMessage = _('conversation_media_video_raw'); break;
+        case 'messageMediaDocument': notificationMessage = message.media.document.file_name || _('conversation_media_document_raw'); break;
+        case 'messageMediaAudio': notificationMessage = _('conversation_media_audio_raw'); break;
+        case 'messageMediaGeo': notificationMessage = _('conversation_media_location_raw'); break;
+        case 'messageMediaContact': notificationMessage = _('conversation_media_contact_raw'); break;
+        default: notificationMessage = _('conversation_media_attachment_raw'); break;
       }
     } else if (message._ == 'messageService') {
       switch (message.action._) {
-        case 'messageActionChatCreate': notificationMessage = _('conversation_group_created'); break;
-        case 'messageActionChatEditTitle': notificationMessage = _('conversation_group_renamed'); break;
-        case 'messageActionChatEditPhoto': notificationMessage = _('conversation_group_photo_updated'); break;
-        case 'messageActionChatDeletePhoto': notificationMessage = _('conversation_group_photo_removed'); break;
+        case 'messageActionChatCreate': notificationMessage = _('conversation_group_created_raw'); break;
+        case 'messageActionChatEditTitle': notificationMessage = _('conversation_group_renamed_raw'); break;
+        case 'messageActionChatEditPhoto': notificationMessage = _('conversation_group_photo_updated_raw'); break;
+        case 'messageActionChatDeletePhoto': notificationMessage = _('conversation_group_photo_removed_raw'); break;
         case 'messageActionChatAddUser':
-          notificationMessage = message.action.user_id == message.from_id ? _('conversation_returned_to_group') : _('conversation_invited_user_message');
+          notificationMessage = message.action.user_id == message.from_id ? _('conversation_returned_to_group') : _('conversation_invited_user_message_raw');
           break;
         case 'messageActionChatDeleteUser':
-          notificationMessage = message.action.user_id == message.from_id ? _('conversation_left_group') : _('conversation_kicked_user_message');
+          notificationMessage = message.action.user_id == message.from_id ? _('conversation_left_group') : _('conversation_kicked_user_message_raw');
           break;
       }
     }
@@ -1963,9 +1968,9 @@ angular.module('myApp.services', ['myApp.i18n'])
       peerString = AppUsersManager.getUserString(peerID);
 
     } else {
-      notification.title = (fromUser.first_name || fromUser.last_name || _('conversation_unknown_user')) +
+      notification.title = (fromUser.first_name || fromUser.last_name || _('conversation_unknown_user_raw')) +
                            ' @ ' +
-                           (AppChatsManager.getChat(-peerID).title || _('conversation_unknown_chat'));
+                           (AppChatsManager.getChat(-peerID).title || _('conversation_unknown_chat_raw'));
 
       notificationPhoto = AppChatsManager.getChatPhoto(-peerID, 'Group');
 
@@ -2027,10 +2032,6 @@ angular.module('myApp.services', ['myApp.i18n'])
             peerID = getMessagePeer(message),
             historyStorage = historiesStorage[peerID];
 
-        if (!message.out) {
-          AppUsersManager.forceUserOnline(message.from_id);
-        }
-
         if (historyStorage !== undefined) {
           var topMsgID = historiesStorage[peerID].history[0];
           if (historiesStorage[peerID].history.indexOf(message.id) != -1) {
@@ -2049,6 +2050,10 @@ angular.module('myApp.services', ['myApp.i18n'])
         }
 
         saveMessages([message]);
+
+        if (!message.out) {
+          AppUsersManager.forceUserOnline(message.from_id);
+        }
 
         if (historyStorage.count !== null) {
           historyStorage.count++;
@@ -2178,6 +2183,7 @@ angular.module('myApp.services', ['myApp.i18n'])
               id: messageID,
               from_id: message.from_id,
               to_id: message.to_id,
+              flags: message.flags,
               out: message.out,
               unread: message.unread,
               date: message.date
@@ -2328,8 +2334,8 @@ angular.module('myApp.services', ['myApp.i18n'])
 
   function wrapForHistory (photoID) {
     var photo = angular.copy(photos[photoID]) || {_: 'photoEmpty'},
-        width = Math.min(windowW - 80, 260),
-        height = Math.min(windowH - 100, 260),
+        width = Math.min(windowW - 80, Config.Mobile ? 210 : 260),
+        height = Math.min(windowH - 100, Config.Mobile ? 210 : 260),
         thumbPhotoSize = choosePhotoSize(photo, width, height),
         thumb = {
           placeholder: 'img/placeholders/PhotoThumbConversation.gif',
@@ -2445,6 +2451,10 @@ angular.module('myApp.services', ['myApp.i18n'])
         };
 
     FileManager.chooseSave(fileName, ext, mimeType).then(function (writableFileEntry) {
+      if (!writableFileEntry) {
+        return;
+      }
+      
       MtpApiFileManager.downloadFile(
         fullPhotoSize.location.dc_id, inputFileLocation, fullPhotoSize.size, {
         mime: mimeType,
@@ -2506,8 +2516,8 @@ angular.module('myApp.services', ['myApp.i18n'])
     }
 
     var video = angular.copy(videos[videoID]),
-        width = Math.min(windowW - 80, windowW <= 479 ? 260 : 200),
-        height = Math.min(windowH - 100, windowW <= 479 ? 260 : 200),
+        width = Math.min(windowW - 80, Config.Mobile ? 210 : 200),
+        height = Math.min(windowH - 100, Config.Mobile ? 210 : 200),
         thumbPhotoSize = video.thumb,
         thumb = {
           placeholder: 'img/placeholders/VideoThumbConversation.gif',
@@ -2606,6 +2616,10 @@ angular.module('myApp.services', ['myApp.i18n'])
         fileName = 'video' + videoID + '.' + ext;
 
     FileManager.chooseSave(fileName, ext, mimeType).then(function (writableFileEntry) {
+      if (!writableFileEntry) {
+        return;
+      }
+
       var downloadPromise = MtpApiFileManager.downloadFile(video.dc_id, inputFileLocation, video.size, {
         mime: mimeType,
         toFileEntry: writableFileEntry
@@ -2677,6 +2691,7 @@ angular.module('myApp.services', ['myApp.i18n'])
 
     var doc = angular.copy(docs[docID]),
         isGif = doc.mime_type == 'image/gif',
+        isAudio = doc.mime_type.substr(0, 6) == 'audio/',
         width = isGif ? Math.min(windowW - 80, 260) : 100,
         height = isGif ? Math.min(windowH - 100, 260) : 100,
         thumbPhotoSize = doc.thumb,
@@ -2706,10 +2721,13 @@ angular.module('myApp.services', ['myApp.i18n'])
     doc.thumb = thumb;
 
     doc.canDownload = !(window.chrome && chrome.fileSystem && chrome.fileSystem.chooseEntry);
-    doc.withPreview = doc.canDownload && doc.thumb && doc.mime_type.match(/^(image\/|application\/pdf)/) ? 1 : 0;
+    doc.withPreview = doc.canDownload && doc.mime_type.match(/^(image\/|application\/pdf)/) ? 1 : 0;
 
-    if (doc.withPreview && isGif) {
+    if (isGif && doc.thumb) {
       doc.isSpecial = 'gif';
+    }
+    else if (isAudio) {
+      doc.isSpecial = 'audio';
     }
 
     return docsForHistory[docID] = doc;
@@ -2724,8 +2742,6 @@ angular.module('myApp.services', ['myApp.i18n'])
           access_hash: doc.access_hash
         };
 
-    historyDoc.progress = {enabled: true, percent: 1, total: doc.size};
-
     function updateDownloadProgress (progress) {
       console.log('dl progress', progress);
       historyDoc.progress.done = progress.done;
@@ -2735,6 +2751,12 @@ angular.module('myApp.services', ['myApp.i18n'])
 
     var ext = (doc.file_name.split('.', 2) || [])[1] || '';
     FileManager.chooseSave(doc.file_name, ext, doc.mime_type).then(function (writableFileEntry) {
+      if (!writableFileEntry) {
+        return;
+      }
+
+      historyDoc.progress = {enabled: true, percent: 1, total: doc.size};
+
       var downloadPromise = MtpApiFileManager.downloadFile(doc.dc_id, inputFileLocation, doc.size, {
         mime: doc.mime_type,
         toFileEntry: writableFileEntry
@@ -2750,6 +2772,8 @@ angular.module('myApp.services', ['myApp.i18n'])
 
       historyDoc.progress.cancel = downloadPromise.cancel;
     }, function () {
+      historyDoc.progress = {enabled: true, percent: 1, total: doc.size};
+
       var downloadPromise = MtpApiFileManager.downloadFile(doc.dc_id, inputFileLocation, doc.size, {mime: doc.mime_type});
 
       downloadPromise.then(function (url) {
@@ -2836,6 +2860,8 @@ angular.module('myApp.services', ['myApp.i18n'])
     }, updateDownloadProgress);
 
     historyAudio.progress.cancel = downloadPromise.cancel;
+
+    return downloadPromise;
   }
 
   $rootScope.openAudio = openAudio;
@@ -2927,8 +2953,7 @@ angular.module('myApp.services', ['myApp.i18n'])
             id: updateMessage.id,
             from_id: updateMessage.from_id,
             to_id: AppPeersManager.getOutputPeer(MtpApiManager.getUserID()),
-            out: false,
-            unread: true,
+            flags: 1,
             date: updateMessage.date,
             message: updateMessage.message,
             media: {_: 'messageMediaEmpty'}
@@ -2951,8 +2976,7 @@ angular.module('myApp.services', ['myApp.i18n'])
             id: updateMessage.id,
             from_id: updateMessage.from_id,
             to_id: AppPeersManager.getOutputPeer(-updateMessage.chat_id),
-            out: false,
-            unread: true,
+            flags: 1,
             date: updateMessage.date,
             message: updateMessage.message,
             media: {_: 'messageMediaEmpty'}
@@ -3444,7 +3468,7 @@ angular.module('myApp.services', ['myApp.i18n'])
 
 })
 
-.service('NotificationsManager', function ($rootScope, $window, $timeout, $interval, $q, MtpApiManager, AppPeersManager, IdleManager, Storage, AppRuntimeManager) {
+.service('NotificationsManager', function ($rootScope, $window, $timeout, $interval, $q, _, MtpApiManager, AppPeersManager, IdleManager, Storage, AppRuntimeManager) {
 
   navigator.vibrate = navigator.vibrate || navigator.mozVibrate || navigator.webkitVibrate;
 
@@ -3454,8 +3478,9 @@ angular.module('myApp.services', ['myApp.i18n'])
   var notificationsCount = 0;
   var vibrateSupport = !!navigator.vibrate;
   var peerSettings = {};
-  var faviconBackupEl = $('link[rel="icon"]'),
+  var faviconBackupEl = $('link[rel="icon"]:first'),
       faviconNewEl = $('<link rel="icon" href="favicon_unread.ico" type="image/x-icon" />');
+  var langNotificationsPluralize = _.pluralize('page_title_pluralize_notifications');
 
   var titleBackup = document.title,
       titlePromise;
@@ -3466,7 +3491,7 @@ angular.module('myApp.services', ['myApp.i18n'])
 
     if (!newVal) {
       document.title = titleBackup;
-      $('link[rel="icon"]').replaceWith(faviconBackupEl);
+      $('link[rel="icon"]:first').replaceWith(faviconBackupEl);
       notificationsClear();
     } else {
       titleBackup = document.title;
@@ -3475,16 +3500,13 @@ angular.module('myApp.services', ['myApp.i18n'])
         var time = tsNow();
         if (!notificationsCount || time % 2000 > 1000) {
           document.title = titleBackup;
-          var curFav = $('link[rel="icon"]');
+          var curFav = $('link[rel="icon"]:first');
           if (curFav.attr('href').indexOf('favicon_unread') != -1) {
             curFav.replaceWith(faviconBackupEl);
           }
         } else {
-          document.title = notificationsCount > 1
-            ? (notificationsCount + ' notifications')
-            : '1 notification';
-
-          $('link[rel="icon"]').replaceWith(faviconNewEl);
+          document.title = langNotificationsPluralize(notificationsCount);
+          $('link[rel="icon"]:first').replaceWith(faviconNewEl);
         }
       }, 1000);
     }

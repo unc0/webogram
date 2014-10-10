@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.0 - messaging web application for MTProto
+ * Webogram v0.3.1 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -33,11 +33,11 @@ angular.module('myApp.directives', ['myApp.filters'])
     };
   })
 
-  .directive('myMessage', function($filter) {
+  .directive('myMessage', function($filter, _) {
 
     var dateFilter = $filter('myDate'),
         dateSplitHtml = '<div class="im_message_date_split im_service_message_wrap"><div class="im_service_message"></div></div>',
-        unreadSplitHtml = '<div class="im_message_unread_split">Unread messages</div>',
+        unreadSplitHtml = '<div class="im_message_unread_split">' + _('unread_messages_split') + '</div>',
         selectedClass = 'im_message_selected',
         focusClass = 'im_message_focus',
         unreadClass =  'im_message_unread',
@@ -220,6 +220,7 @@ angular.module('myApp.directives', ['myApp.filters'])
           scrollableWrap = $('.im_dialogs_scrollable_wrap', element)[0],
           searchField = $('.im_dialogs_search_field', element)[0],
           panelWrap = $('.im_dialogs_panel', element)[0],
+          searchClear = $('.im_dialogs_search_clear', element)[0],
           tabsWrap = $('.im_dialogs_tabs_wrap', element)[0],
           searchFocused = false;
 
@@ -283,6 +284,9 @@ angular.module('myApp.directives', ['myApp.filters'])
               searchField.select();
             }
           }
+          else if (searchField.value) {
+            $(searchClear).trigger('click');
+          }
           return cancelEvent(e);
         }
 
@@ -294,14 +298,23 @@ angular.module('myApp.directives', ['myApp.filters'])
           return cancelEvent(e);
         }
 
-        if (e.keyCode == 38 || e.keyCode == 40) { // UP, DOWN
-          var skip = !e.shiftKey && e.altKey;
+        var next, prev, skip, ctrlTabSupported = Config.Modes.packed;
+        if (e.keyCode == 40 || e.keyCode == 38) { // UP, DOWN
+          next = e.keyCode == 40;
+          prev = !next;
+          skip = !e.shiftKey && e.altKey
+        }
+        else if (ctrlTabSupported && e.keyCode == 9 && e.ctrlKey && !e.metaKey) { // Ctrl + Tab, Shift + Ctrl + Tab
+          next = !e.shiftKey;
+          prev = !next;
+          skip = true;
+        }
+        if (next || prev) {
           if (!skip && (!searchFocused || e.metaKey)) {
             return true;
           }
 
-          var next = e.keyCode == 40,
-              currentSelected = !skip && $(scrollableWrap).find('.im_dialog_selected')[0] || $(scrollableWrap).find('.active a.im_dialog')[0],
+          var currentSelected = !skip && $(scrollableWrap).find('.im_dialog_selected')[0] || $(scrollableWrap).find('.active a.im_dialog')[0],
               currentSelectedWrap = currentSelected && currentSelected.parentNode,
               nextDialogWrap;
 
@@ -1360,7 +1373,7 @@ angular.module('myApp.directives', ['myApp.filters'])
 
   })
 
-  .directive('myLoadGif', function(MtpApiFileManager) {
+  .directive('myLoadGif', function($rootScope, MtpApiFileManager) {
 
     return {
       link: link,
@@ -1384,7 +1397,12 @@ angular.module('myApp.directives', ['myApp.filters'])
 
       /*return $scope.document.progress = {enabled: true, percent: 30, total: $scope.document.size};*/
 
-      $scope.toggle = function () {
+      $scope.toggle = function (e) {
+        if (checkClick(e, true)) {
+          $rootScope.downloadDoc($scope.document.id);
+          return false;
+        }
+
         if ($scope.document.url) {
           $scope.isActive = !$scope.isActive;
           $scope.$emit('ui_height');
@@ -1479,27 +1497,6 @@ angular.module('myApp.directives', ['myApp.filters'])
       }
 
       return animationSupported;
-    }
-  })
-
-  .directive('myAudioAutoplay', function() {
-
-    return {
-      link: link,
-      scope: {
-        audio: '='
-      }
-    };
-
-    function link ($scope, element, attrs) {
-      $scope.$watch('audio.autoplay', function (autoplay) {
-        if (autoplay) {
-          element.autoplay = true;
-          element[0].play();
-        } else {
-          element.autoplay = false;
-        }
-      });
     }
   })
 
@@ -1840,5 +1837,85 @@ angular.module('myApp.directives', ['myApp.filters'])
         $(element[0].firstChild).addClass(attrs.imgClass)
       }
 
+    }
+  })
+
+  .directive('myAudioPlayer', function ($sce, $timeout, $q, FileManager, MtpApiFileManager) {
+
+    var currentPlayer = false;
+
+    return {
+      link: link,
+      scope: {
+        audio: '='
+      },
+      templateUrl: templateUrl('audio_player')
+    };
+
+    function downloadAudio (audio) {
+      var inputFileLocation = {
+            _: audio._ == 'document' ? 'inputDocumentFileLocation' : 'inputAudioFileLocation',
+            id: audio.id,
+            access_hash: audio.access_hash
+          };
+
+      audio.progress = {enabled: true, percent: 1, total: audio.size};
+
+      var downloadPromise = MtpApiFileManager.downloadFile(audio.dc_id, inputFileLocation, audio.size, {mime: 'audio/ogg'});
+
+      audio.progress.cancel = downloadPromise.cancel;
+
+      return downloadPromise.then(function (url) {
+        delete audio.progress;
+        audio.rawUrl = url;
+        audio.url = $sce.trustAsResourceUrl(url);
+      }, function (e) {
+        console.log('audio download failed', e);
+        audio.progress.enabled = false;
+      }, function (progress) {
+        console.log('audio dl progress', progress);
+        audio.progress.done = progress.done;
+        audio.progress.percent = Math.max(1, Math.floor(100 * progress.done / progress.total));
+      });
+    }
+
+    function checkPlayer (newPlayer) {
+      if (newPlayer === currentPlayer) {
+        return false;
+      }
+      if (currentPlayer) {
+        currentPlayer.pause();
+      }
+      currentPlayer = newPlayer;
+    }
+
+    function link($scope, element, attrs) {
+      $scope.mediaPlayer = {};
+
+      $scope.download = function () {
+        ($scope.audio.rawUrl ? $q.when() : downloadAudio($scope.audio)).then(
+          function () {
+            FileManager.download($scope.audio.rawUrl, $scope.audio.mime_type || 'audio/ogg', $scope.audio.file_name || 'audio.ogg');
+          }
+        );
+      };
+
+      $scope.togglePlay = function () {
+        if ($scope.audio.url) {
+          checkPlayer($scope.mediaPlayer.player);
+          $scope.mediaPlayer.player.playPause();
+        }
+        else if ($scope.audio.progress && $scope.audio.progress.enabled) {
+          $scope.audio.progress.cancel();
+        }
+        else {
+          downloadAudio($scope.audio).then(function () {
+            onContentLoaded(function () {
+              checkPlayer($scope.mediaPlayer.player);
+              $scope.mediaPlayer.player.play();
+            })
+          })
+        }
+      };
     }
   })

@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.0 - messaging web application for MTProto
+ * Webogram v0.3.1 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -73,7 +73,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
         return;
       }
       var wasCountry = $scope.credentials.phone_country;
-      MtpApiManager.invokeApi('help.getNearestDc', {}, {dcID: 4, createNetworker: true}).then(function (nearestDcResult) {
+      MtpApiManager.invokeApi('help.getNearestDc', {}, {dcID: 2, createNetworker: true}).then(function (nearestDcResult) {
         if (wasCountry == $scope.credentials.phone_country) {
           selectPhoneCountryByIso2(nearestDcResult.country);
         }
@@ -1435,7 +1435,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     function onTyping () {
       MtpApiManager.invokeApi('messages.setTyping', {
         peer: $scope.curDialog.inputPeer,
-        typing: true
+        action: {_: 'sendMessageTypingAction'}
       });
     }
 
@@ -1453,16 +1453,21 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     }
   })
 
-  .controller('AppLangFooterController', function ($scope, _, Storage, ErrorService, AppRuntimeManager) {
+  .controller('AppLangSelectController', function ($scope, _, Storage, ErrorService, AppRuntimeManager) {
     $scope.supportedLocales = Config.I18n.supported;
     $scope.langNames = Config.I18n.languages;
     $scope.curLocale = Config.I18n.locale;
+    $scope.form = {locale: Config.I18n.locale};
 
     $scope.localeSelect = function localeSelect (newLocale) {
-      Storage.set({i18n_locale: newLocale});
+      newLocale = newLocale || $scope.form.locale;
       if ($scope.curLocale !== newLocale) {
         ErrorService.confirm({type: 'APPLY_LANG_WITH_RELOAD'}).then(function () {
-          AppRuntimeManager.reload();
+          Storage.set({i18n_locale: newLocale}).then(function () {
+            AppRuntimeManager.reload();
+          });
+        }, function () {
+          $scope.form.locale = $scope.curLocale;
         });
       }
     };
@@ -1505,7 +1510,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       return;
     }
 
-    $scope.delete = function () {
+    $scope['delete'] = function () {
       var messageID = $scope.messageID;
       ErrorService.confirm({type: 'MESSAGE_DELETE'}).then(function () {
         AppMessagesManager.deleteMessages([messageID]);
@@ -1714,7 +1719,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       });
     };
 
-    $scope.delete = function () {
+    $scope['delete'] = function () {
       var messageID = $scope.photoID;
       ErrorService.confirm({type: 'MESSAGE_DELETE'}).then(function () {
         AppMessagesManager.deleteMessages([messageID]);
@@ -1744,7 +1749,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       });
     };
 
-    $scope.delete = function () {
+    $scope['delete'] = function () {
       var messageID = $scope.messageID;
       ErrorService.confirm({type: 'MESSAGE_DELETE'}).then(function () {
         AppMessagesManager.deleteMessages([messageID]);
@@ -2519,7 +2524,11 @@ angular.module('myApp.controllers', ['myApp.i18n'])
           }
         }
       }
-
+      if (String.prototype.localeCompare) {
+        $scope.countries.sort(function(a, b) {
+          return a.name.localeCompare(b.name);
+        });
+      }
     });
   })
 

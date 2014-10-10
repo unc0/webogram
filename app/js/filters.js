@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.0 - messaging web application for MTProto
+ * Webogram v0.3.1 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -63,7 +63,7 @@ angular.module('myApp.filters', ['myApp.i18n'])
 
       var ticks = timestamp * 1000,
           diff = Math.abs(tsNow() - ticks),
-          format = 'HH:mm';
+          format = 'shortTime';
 
       if (diff > 518400000) { // 6 days
         format = 'shortDate';
@@ -78,7 +78,7 @@ angular.module('myApp.filters', ['myApp.i18n'])
   .filter('time', ['$filter', function($filter) {
     var cachedDates = {},
         dateFilter = $filter('date'),
-        format = Config.Mobile ? 'HH:mm' : 'HH:mm:ss';
+        format = Config.Mobile ? 'shortTime' : 'mediumTime';
 
     return function (timestamp) {
       if (cachedDates[timestamp]) {
@@ -104,6 +104,10 @@ angular.module('myApp.filters', ['myApp.i18n'])
 
   .filter('duration', [function() {
     return function (duration) {
+      duration = parseInt(duration);
+      if (isNaN(duration)) {
+        duration = 0;
+      }
       var secs = duration % 60,
           mins = Math.floor((duration - secs) / 60.0);
 
@@ -169,14 +173,9 @@ angular.module('myApp.filters', ['myApp.i18n'])
   }])
 
   .filter('relativeTime', ['$filter', '_', function($filter, _) {
-    var langMinutes = {
-      one: 'relative_time_one_minute',
-      many: 'relative_time_many_minutes'
-    },
-      langHours = {
-        one: 'relative_time_one_hour',
-        many: 'relative_time_many_hours'
-      };
+    var langMinutesPluralize = _.pluralize('relative_time_pluralize_minutes_ago'),
+        langHoursPluralize = _.pluralize('relative_time_pluralize_hours_ago');
+
     return function (timestamp) {
       var ticks = timestamp * 1000,
           diff = Math.abs(tsNow() - ticks);
@@ -186,11 +185,11 @@ angular.module('myApp.filters', ['myApp.i18n'])
       }
       if (diff < 3000000) {
         var minutes = Math.ceil(diff / 60000);
-        return _(langMinutes[minutes > 1 ? 'many' : 'one'], {minutes: minutes});
+        return langMinutesPluralize(minutes);
       }
       if (diff < 10000000) {
         var hours = Math.ceil(diff / 3600000);
-        return _(langHours[hours > 1 ? 'many' : 'one'], {hours: hours});
+        return langHoursPluralize(hours);
       }
       return $filter('dateOrTime')(timestamp);
     }

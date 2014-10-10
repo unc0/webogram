@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.0 - messaging web application for MTProto
+ * Webogram v0.3.1 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -365,7 +365,7 @@ angular.module('izhukov.utils', [])
 
     var deferred = $q.defer();
 
-    $window.requestFileSystem($window.TEMPORARY, 5*1024*1024, function (fs) {
+    $window.requestFileSystem($window.TEMPORARY, 500 * 1024 * 1024, function (fs) {
       cachedFs = fs;
       deferred.resolve();
     }, function (e) {
@@ -423,9 +423,11 @@ angular.module('izhukov.utils', [])
           }
           deferred.resolve(fileWriter);
         }, function (error) {
+          storageIsAvailable = false;
           deferred.reject(error);
         });
       }, function (error) {
+        storageIsAvailable = false;
         deferred.reject(error);
       });
 
@@ -494,7 +496,8 @@ angular.module('izhukov.utils', [])
     };
 
     worker.onerror = function(error) {
-      console.log('CW error', error, error.stack);
+      console.error('CW error', error, error.stack);
+      worker = false;
     };
   }
 
