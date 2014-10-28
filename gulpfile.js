@@ -1,9 +1,11 @@
 var gulp = require('gulp');
+var gutil = require('gulp-util');
 var es = require('event-stream');
 var pj = require('./package.json');
 var $ = require('gulp-load-plugins')();
 var concat = require('gulp-concat');
 var path = require('path');
+var NwBuilder = require('node-webkit-builder');
 
 // The generated file is being created at src
 // so it can be fetched by usemin.
@@ -41,7 +43,7 @@ gulp.task('copy-images', function() {
 
 gulp.task('copy', function() {
   return es.concat(
-    gulp.src(['app/favicon.ico', 'app/favicon_unread.ico', 'app/manifest.webapp', 'app/manifest.json', 'app/**/*worker.js'])
+    gulp.src(['app/favicon.ico', 'app/favicon_unread.ico', 'app/manifest.webapp', 'app/manifest.json', 'app/**/*worker.js', 'package.json'])
       .pipe(gulp.dest('dist')),
     gulp.src(['app/img/**/*.wav'])
       .pipe(gulp.dest('dist/img')),
@@ -200,6 +202,26 @@ gulp.task('package-dev', function() {
 });
 
 
+gulp.task('nw', function () {
+  var nw = new NwBuilder({
+    version: 'latest',
+    files: './dist/**',
+    macIcns: './nw-icons/icon.icns',
+    macPlist: {mac_bundle_id: 'myPkg'},
+    platforms: ['win', 'osx', 'linux32', 'linux64']
+  });
+
+  // Log stuff you want
+  nw.on('log', function (msg) {
+    gutil.log('node-webkit-builder', msg);
+  });
+
+  // Build returns a promise, return it so the task isn't called in parallel
+  return nw.build().catch(function (err) {
+    gutil.log('node-webkit-builder', err);
+  });
+});
+
 gulp.task('clean', function() {
   return gulp.src(['dist/*', 'app/js/templates.js', '!dist/.git']).pipe($.clean());
 });
@@ -212,6 +234,10 @@ gulp.task('build', ['usemin', 'copy', 'copy-locales', 'copy-images'], function (
   gulp.start('disable-production');
 });
 gulp.task('package', ['cleanup-dist']);
+
+gulp.task('nwpak', ['build'], function () {
+  gulp.start('nw');
+});
 
 gulp.task('publish', ['build'], function() {
   gulp.start('add-appcache-manifest');
