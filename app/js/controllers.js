@@ -398,6 +398,10 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       });
     };
 
+    $scope.openAbout = function () {
+      Webogram.gui.Shell.openExternal('https://github.com/zhukov/webogram');
+    };
+
     $scope.hideWindow = function () {
       Webogram.Window.hide();
     };
