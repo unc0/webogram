@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.1 - messaging web application for MTProto
+ * Webogram v0.3.2 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -52,7 +52,7 @@ angular.module('myApp.services', ['myApp.i18n'])
       return false;
     }
 
-    return (user.first_name || '') + ' ' + (user.last_name || '') + ' ' + (user.phone || '');
+    return (user.first_name || '') + ' ' + (user.last_name || '') + ' ' + (user.phone || '') + ' ' + (user.username || '');
   }
 
   function getContacts (query) {
@@ -184,9 +184,10 @@ angular.module('myApp.services', ['myApp.i18n'])
     return user;
   }
 
-  function openUser (userID, accessHash) {
+  function openUser (userID, override) {
     var scope = $rootScope.$new();
     scope.userID = userID;
+    scope.override = override || {};
 
     var modalInstance = $modal.open({
       templateUrl: templateUrl('user_modal'),
@@ -1268,6 +1269,9 @@ angular.module('myApp.services', ['myApp.i18n'])
   }
 
   function sendText(peerID, text) {
+    if (!angular.isString(text) || !text.length) {
+      return;
+    }
     var messageID = tempID--,
         randomID = [nextRandomInt(0xFFFFFFFF), nextRandomInt(0xFFFFFFFF)],
         randomIDS = bigint(randomID[0]).shiftLeft(32).add(bigint(randomID[1])).toString(),
@@ -3182,7 +3186,7 @@ angular.module('myApp.services', ['myApp.i18n'])
 
   var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
   var regExp = new RegExp('((?:(ftp|https?)://|(?:mailto:)?([A-Za-z0-9._%+-]+@))(\\S*\\.\\S*[^\\s.;,(){}<>"\']))|(\\n)|(' + emojiUtf.join('|') + ')|(^|\\s)(#[' + regexAlphaNumericChars + ']{3,20})', 'i');
-  var youtubeRegex = /(?:https?:\/\/)?(?:www\.)?youtu(?:|.be|be.com|.b)(?:\/v\/|\/watch\\?v=|e\/|\/watch(?:.+)v=)(.{11})(?:\&[^\s]*)?/;
+  var youtubeRegex = /(?:https?:\/\/)?(?:www\.)?youtu(?:|.be|be.com|.b)(?:\/v\/|\/watch\\?v=|e\/|(?:\/\??#)?\/watch(?:.+)v=)(.{11})(?:\&[^\s]*)?/;
 
   return {
     wrapRichText: wrapRichText,
@@ -3947,6 +3951,7 @@ angular.module('myApp.services', ['myApp.i18n'])
     };
 
     $modal.open({
+      controller: 'ChangelogModalController',
       templateUrl: templateUrl('changelog_modal'),
       scope: $scope,
       windowClass: 'changelog_modal_window mobile_modal'

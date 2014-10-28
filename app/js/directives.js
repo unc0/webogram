@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.1 - messaging web application for MTProto
+ * Webogram v0.3.2 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -607,7 +607,7 @@ angular.module('myApp.directives', ['myApp.filters'])
         }
       }
 
-      var animated = transform ? true : false,
+      var animated = transform && false ? true : false,
           curAnimation = false;
 
       $scope.$on('ui_history_append_new', function (e, options) {
@@ -900,9 +900,11 @@ angular.module('myApp.directives', ['myApp.filters'])
           .on('keyup', function (e) {
             updateHeight();
 
-            $scope.$apply(function () {
-              $scope.draftMessage.text = richTextarea.textContent;
-            });
+            if (!sendAwaiting) {
+              $scope.$apply(function () {
+                $scope.draftMessage.text = richTextarea.textContent;
+              });
+            }
 
             $timeout.cancel(updatePromise);
             updatePromise = $timeout(updateValue, 1000);
@@ -952,7 +954,7 @@ angular.module('myApp.directives', ['myApp.filters'])
           if (submit) {
             $timeout.cancel(updatePromise);
             updateValue();
-            $(element).trigger('submit');
+            $scope.draftMessage.send();
             $(element).trigger('message_send');
             resetAfterSubmit();
             return cancelEvent(e);
@@ -964,7 +966,7 @@ angular.module('myApp.directives', ['myApp.filters'])
       $(submitBtn).on('mousedown touchstart', function (e) {
         $timeout.cancel(updatePromise);
         updateValue();
-        $(element).trigger('submit');
+        $scope.draftMessage.send();
         $(element).trigger('message_send');
         resetAfterSubmit();
         return cancelEvent(e);
@@ -1032,10 +1034,19 @@ angular.module('myApp.directives', ['myApp.filters'])
         $scope.$on('ui_history_change', focusField);
       }
 
-      $scope.$on('ui_message_send', focusField);
-
       $scope.$on('ui_peer_draft', updateRichTextarea);
-      $scope.$on('ui_message_before_send', updateValue);
+
+      var sendAwaiting = false;
+      $scope.$on('ui_message_before_send', function () {
+        sendAwaiting = true;
+        $timeout.cancel(updatePromise);
+        updateValue();
+      });
+      $scope.$on('ui_message_send', function () {
+        sendAwaiting = false;
+        focusField();
+      });
+
 
       function focusField () {
         onContentLoaded(function () {
@@ -1756,7 +1767,7 @@ angular.module('myApp.directives', ['myApp.filters'])
 
       if (element[0].tagName == 'A') {
         element.on('click', function () {
-          $rootScope.openUser(userID);
+          $rootScope.openUser(userID, attrs.userOverride && $scope.$eval(attrs.userOverride));
         });
       }
       if (attrs.color && $scope.$eval(attrs.color)) {
@@ -1829,7 +1840,7 @@ angular.module('myApp.directives', ['myApp.filters'])
 
       if (element[0].tagName == 'A') {
         element.on('click', function (e) {
-          $rootScope.openUser($scope.userID);
+          $rootScope.openUser($scope.userID, attrs.userOverride && $scope.$eval(attrs.userOverride));
         });
       }
 

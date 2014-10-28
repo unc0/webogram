@@ -462,6 +462,12 @@ input[type="number"] {
 .modal_simple_form .form-group {
   margin-bottom: 13px;
 }
+.modal_simple_form_description {
+  color: #777;
+  line-height: 160%;
+  margin: 10px 0 0;
+  text-align: justify;
+}
 
 .modal_section_header {
   font-size: 12px;
@@ -474,7 +480,8 @@ input[type="number"] {
 .modal_section_body {
   padding: 14px 14px;
 }
-.modal_section_body p {
+.modal_section_body p,
+.modal_section_body dl {
   margin: 5px 0;
 }
 .modal_section:last-child .modal_section_body {
@@ -1463,25 +1470,33 @@ img.im_message_document_thumb {
 .audio_player_button {
   width: 38px;
   height: 38px;
+  padding-left: 12px;
+  padding-right: 12px;
   border-radius: 3px;
   margin-right: 12px;
 }
 .audio_player_btn_icon {
   display: block;
-  width: 13px;
-  height: 18px;
-  background: url(../img/icons/IconsetW.png) -15px -898px no-repeat;
+  width: 14px;
+  height: 17px;
+  background: url(../img/icons/IconsetW.png) -15px -897px no-repeat;
   background-size: 42px 971px;
 }
 .is_1x .audio_player_btn_icon {
   background-image: url(../img/icons/IconsetW_1x.png);
+  background-position: -15px -898px;
 }
-.audio_player_btn_icon_pause {
-  background-position: -15px -924px;
+.audio_player_btn_icon_pause,
+.is_1x .audio_player_btn_icon_pause,
+.audio_player_btn_icon_cancel,
+.is_1x .audio_player_btn_icon_cancel {
+  width: 13px;
+  height: 15px;
+  background-position: -15px -923px;
 }
-.audio_player_btn_icon_cancel {
-  background-position: -15px -924px;
-  /*background-position: -15px -948px;*/
+.is_1x .audio_player_btn_icon_pause,
+.is_1x .audio_player_btn_icon_cancel {
+  background-position: -15px -925px;
 }
 .audio_player_title_wrap {
   overflow: hidden;
@@ -2111,6 +2126,10 @@ img.img_fullsize {
 
 .settings_modal_wrap .im_attach_input {
   z-index: 999;
+}
+.settings_modal_username_link,
+.settings_modal_username_link:hover {
+  color: inherit;
 }
 .settings_external_service {
   line-height: 0;

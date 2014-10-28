@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.1 - messaging web application for MTProto
+ * Webogram v0.3.2 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -197,10 +197,16 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
       resultArray = resultArray.buffer;
     }
 
-    return $http.post('http://' + MtpDcConfigurator.chooseServer(dcID) + '/apiw1', resultArray, {
-      responseType: 'arraybuffer',
-      transformRequest: null
-    }).then(
+    var requestPromise;
+    try {
+      requestPromise =  $http.post('http://' + MtpDcConfigurator.chooseServer(dcID) + '/apiw1', resultArray, {
+        responseType: 'arraybuffer',
+        transformRequest: null
+      });
+    } catch (e) {
+      requestPromise = $q.reject({code: 406, type: 'NETWORK_BAD_RESPONSE', originalError: e});
+    }
+    return requestPromise.then(
       function (result) {
         if (!result.data || !result.data.byteLength) {
           return $q.reject({code: 406, type: 'NETWORK_BAD_RESPONSE'});
@@ -540,7 +546,7 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
 
 })
 
-.factory('MtpNetworkerFactory', function (MtpDcConfigurator, MtpTimeManager, MtpSecureRandom, Storage, CryptoWorker, $http, $q, $timeout, $interval, $rootScope) {
+.factory('MtpNetworkerFactory', function (MtpDcConfigurator, MtpTimeManager, MtpSecureRandom, Storage, CryptoWorker, AppRuntimeManager, $http, $q, $timeout, $interval, $rootScope) {
 
   var updatesProcessor,
       iii = 0,
@@ -711,7 +717,7 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
     var serializer = new TLSerialization(options);
 
     if (!this.connectionInited) {
-      serializer.storeInt(0x50858a19, 'invokeWithLayer17');
+      serializer.storeInt(0x1c900537, 'invokeWithLayer18');
       serializer.storeInt(0x69796de9, 'initConnection');
       serializer.storeInt(Config.App.id, 'api_id');
       serializer.storeString(navigator.userAgent || 'Unknown UserAgent', 'device_model');
@@ -857,7 +863,7 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
     };
 
     var self = this;
-    this.sendEncryptedRequest(pingMessage).then(function (result) {
+    this.sendEncryptedRequest(pingMessage, {timeout: 15000}).then(function (result) {
       delete $rootScope.offlineConnecting;
       self.toggleOffline(false);
     }, function () {
@@ -889,18 +895,18 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
       }
 
       this.checkConnectionPromise = $timeout(this.checkConnection.bind(this), parseInt(this.checkConnectionPeriod * 1000));
-      this.checkConnectionPeriod = Math.min(60, (1 + this.checkConnectionPeriod) * 1.5);
+      this.checkConnectionPeriod = Math.min(30, (1 + this.checkConnectionPeriod) * 1.5);
 
       this.onOnlineCb = this.checkConnection.bind(this);
 
-      $(document.body).on('online', this.onOnlineCb);
+      $(document.body).on('online focus', this.onOnlineCb);
     } else {
       delete this.longPollPending;
       this.checkLongPoll();
       this.sheduleRequest();
 
       if (this.onOnlineCb) {
-        $(document.body).off('online', this.onOnlineCb);
+        $(document.body).off('online focus', this.onOnlineCb);
       }
       $timeout.cancel(this.checkConnectionPromise);
     }
@@ -1089,8 +1095,9 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
     });
   };
 
-  MtpNetworker.prototype.sendEncryptedRequest = function (message) {
+  MtpNetworker.prototype.sendEncryptedRequest = function (message, options) {
     var self = this;
+    options = options || {};
     // console.log(dT(), 'Send encrypted'/*, message*/);
     // console.trace();
     var data = new TLSerialization({startMaxLength: message.body.length + 64});
@@ -1119,10 +1126,17 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
         resultArray = resultArray.buffer;
       }
 
-      return $http.post('http://' + MtpDcConfigurator.chooseServer(self.dcID) + '/apiw1', resultArray, {
-        responseType: 'arraybuffer',
-        transformRequest: null
-      }).then(
+      var requestPromise;
+      try {
+        options = angular.extend(options || {}, {
+          responseType: 'arraybuffer',
+          transformRequest: null
+        });
+        requestPromise =  $http.post('http://' + MtpDcConfigurator.chooseServer(self.dcID) + '/apiw1', resultArray, options);
+      } catch (e) {
+        requestPromise = $q.reject(e);
+      }
+      return requestPromise.then(
         function (result) {
           if (!result.data || !result.data.byteLength) {
             return $q.reject({code: 406, type: 'NETWORK_BAD_RESPONSE'});
@@ -1130,6 +1144,15 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
           return result;
         },
         function (error) {
+          if (error.status == 404 &&
+              (error.data || '').indexOf('nginx/0.3.33') != -1) {
+            Storage.remove(
+              'dc' + self.dcID + '_server_salt',
+              'dc' + self.dcID + '_auth_key'
+            ).then(function () {
+              AppRuntimeManager.reload();
+            });
+          }
           if (!error.message && !error.type) {
             error = {code: 406, type: 'NETWORK_BAD_REQUEST'};
           }
