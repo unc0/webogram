@@ -9,7 +9,7 @@
     "title": "Telegram",
     "icon": "app/img/icons/icon128.png",
     "toolbar": false,
-    "frame": true,
+    "frame": false,
     "position": "center",
     "resizable": true,
     "width": 800,

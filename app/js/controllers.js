@@ -395,8 +395,17 @@ angular.module('myApp.controllers', ['myApp.i18n'])
           location.hash = '/login';
           AppRuntimeManager.reload();
         });
-      })
+      });
     };
+
+    $scope.hideWindow = function () {
+      Webogram.Window.hide();
+    };
+
+    $scope.closeWindow = function () {
+      Webogram.Window.close();
+    };
+
 
     $scope.showPeerInfo = function () {
       if ($scope.curDialog.peerID > 0) {
