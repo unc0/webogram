@@ -43,7 +43,7 @@ gulp.task('copy-images', function() {
 
 gulp.task('copy', function() {
   return es.concat(
-    gulp.src(['app/favicon.ico', 'app/favicon_unread.ico', 'app/manifest.webapp', 'app/manifest.json', 'app/**/*worker.js', 'package.json'])
+    gulp.src(['app/favicon.ico', 'app/favicon_unread.ico', 'app/manifest.webapp', 'app/manifest.json', 'app/**/*worker.js', 'app/package.json'])
       .pipe(gulp.dest('dist')),
     gulp.src(['app/img/**/*.wav'])
       .pipe(gulp.dest('dist/img')),
@@ -208,7 +208,7 @@ gulp.task('nw', function () {
     files: './dist/**',
     macIcns: './nw-icons/macosx.icns',
     macPlist: {mac_bundle_id: 'myPkg'},
-    platforms: ['win', 'osx', 'linux32', 'linux64']
+    platforms: ['win', 'osx']
   });
 
   // Log stuff you want

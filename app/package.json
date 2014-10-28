@@ -1,0 +1,23 @@
+{
+  "name": "Telegram",
+  "description": "Telegram Web App.\nMore info & source code here: https://github.com/zhukov/webogram",
+  "version": "0.3.2",
+  "main": "index.html",
+  "single-instance": true,
+  "dom_storage_quota": 40,
+  "window": {
+    "title": "Telegram",
+    "icon": "img/icons/icon128.png",
+    "toolbar": false,
+    "frame": false,
+    "position": "center",
+    "resizable": true,
+    "width": 800,
+    "min_width": 675,
+    "height": 650,
+    "min_height": 650,
+    "show": true
+  },
+  "locales": ["en-us", "es-es", "de-de", "it-it", "ru-ru", "zh-cn"],
+  "homepage": "http://zhukov.github.io/webogram"
+}
