@@ -206,7 +206,7 @@ gulp.task('nw', function () {
   var nw = new NwBuilder({
     version: 'latest',
     files: './dist/**',
-    macIcns: './nw-icons/icon.icns',
+    macIcns: './nw-icons/macosx.icns',
     macPlist: {mac_bundle_id: 'myPkg'},
     platforms: ['win', 'osx', 'linux32', 'linux64']
   });
