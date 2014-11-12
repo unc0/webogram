@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.2 - messaging web application for MTProto
+ * Webogram v0.3.3 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -43,9 +43,15 @@ function bytesToHex (bytes) {
 function bytesFromHex (hexString) {
   var len = hexString.length,
       i,
+      start = 0,
       bytes = [];
 
-  for (i = 0; i < len; i += 2) {
+  if (hexString.length % 2) {
+    bytes.push(parseInt(hexString.charAt(0), 16));
+    start++;
+  }
+
+  for (i = start; i < len; i += 2) {
     bytes.push(parseInt(hexString.substr(i, 2), 16));
   }
 
@@ -575,7 +581,7 @@ function bytesModPow (x, y, m) {
   try {
     var xBigInt = str2bigInt(bytesToHex(x), 16),
         yBigInt = str2bigInt(bytesToHex(y), 16),
-        mBigInt = str2bigInt(bytesToHex(m), 16, 2),
+        mBigInt = str2bigInt(bytesToHex(m), 16),
         resBigInt = powMod(xBigInt, yBigInt, mBigInt);
 
     return bytesFromHex(bigInt2str(resBigInt, 16));

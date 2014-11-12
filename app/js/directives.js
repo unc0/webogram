@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.2 - messaging web application for MTProto
+ * Webogram v0.3.3 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -166,6 +166,86 @@ angular.module('myApp.directives', ['myApp.filters'])
       }
     }
   })
+  .directive('myExternalEmbed', function () {
+
+    var twitterAttached = false;
+    var twitterPendingWidgets = [];
+    var embedTag = Config.Modes.chrome_packed ? 'webview' : 'iframe';
+
+    function attachTwitterScript () {
+      twitterAttached = true;
+
+      $('<script>').appendTo('body').attr('src', '//platform.twitter.com/widgets.js');
+    }
+
+    function link ($scope, element, attrs) {
+      var embedData = $scope.$eval(attrs.myExternalEmbed);
+      if (!embedData) {
+        return;
+      }
+      var html = '';
+      var callback = false;
+      var needTwitter = false;
+      switch (embedData[0]) {
+        case 'youtube':
+          var videoID = embedData[1];
+          html = '<div class="im_message_media_embed im_message_video_embed"><' + embedTag + ' type="text/html" frameborder="0" ' +
+                'src="//www.youtube.com/embed/' + videoID +
+                '?autoplay=0&amp;controls=2"></' + embedTag + '></div>';
+          break;
+
+        case 'instagram':
+          var instaID = embedData[1];
+          html = '<div class="im_message_media_embed im_message_insta_embed"><' + embedTag + ' type="text/html" frameborder="0" ' +
+                'src="//instagram.com/p/' + instaID +
+                '/embed/"></' + embedTag + '></div>';
+          break;
+
+        case 'vine':
+          var vineID = embedData[1];
+          html = '<div class="im_message_media_embed im_message_vine_embed"><' + embedTag + ' type="text/html" frameborder="0" ' +
+                'src="//vine.co/v/' + vineID + '/embed/simple"></' + embedTag + '></div>';
+          break;
+
+        case 'twitter':
+          html = '<div class="im_message_twitter_embed"><blockquote class="twitter-tweet" lang="en"><a href="' + embedData[1] + '"></a></blockquote></div>';
+
+          callback = function () {
+            if (!twitterAttached) {
+              twitterAttached = true;
+              $('<script>')
+                .appendTo('body')
+                .on('load', function () {
+                  twttr.events.bind('loaded', function (event) {
+                    for (var i = 0; i < twitterPendingWidgets.length; i++) {
+                      twitterPendingWidgets[i].$emit('ui_height');
+                    }
+                    twitterPendingWidgets = [];
+                  });
+                })
+                .attr('src', '//platform.twitter.com/widgets.js');
+            }
+            else if (window.twttr) {
+              twttr.widgets.load(element[0]);
+            }
+            twitterPendingWidgets.push($scope);
+          };
+          break;
+      }
+
+      if (html) {
+        element[0].innerHTML = html;
+        if (callback) {
+          callback();
+        }
+      }
+    }
+
+    return {
+      link: link
+    };
+
+  })
 
   .directive('myServiceMessage', function() {
     return {
@@ -209,7 +289,7 @@ angular.module('myApp.directives', ['myApp.filters'])
         };
         $scope.docOpen = function () {
           if (!$scope.document.withPreview) {
-            return $scope.download();
+            return $scope.docSave();
           }
           AppDocsManager.openDoc($scope.document.id, $scope.messageId);
         };
@@ -1938,7 +2018,7 @@ angular.module('myApp.directives', ['myApp.filters'])
     var audioVolume = 0.5;
 
     Storage.get('audio_volume').then(function (newAudioVolume) {
-      if (newAudioVolume >= 0.0 && newAudioVolume <= 1.0) {
+      if (newAudioVolume > 0 && newAudioVolume <= 1.0) {
         audioVolume = newAudioVolume;
       }
     });
@@ -2101,6 +2181,11 @@ angular.module('myApp.directives', ['myApp.filters'])
         }
         stopMouseTrack();
 
+        e = e.originalEvent || e;
+
+        if (e.offsetX == undefined) {
+          e.offsetX = e.layerX;
+        }
         lastMinPageX = e.pageX - e.offsetX;
         // console.log('mdown', lastMinPageX, e.pageX, e.offsetX);
         lastUpdValue = minValue + e.offsetX / width * (maxValue - minValue);

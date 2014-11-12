@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.2 - messaging web application for MTProto
+ * Webogram v0.3.3 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -500,7 +500,7 @@ angular.module('izhukov.utils', [])
       };
 
   if (navigator.mimeTypes['application/x-pnacl'] !== undefined) {
-    var listener = $('<div id="nacl_listener"><embed id="mtproto_crypto" width="0" height="0" src="nacl/mtproto_crypto.nmf?'+Math.random()+'" type="application/x-pnacl" /></div>').appendTo($('body'))[0];
+    var listener = $('<div id="nacl_listener"><embed id="mtproto_crypto" width="0" height="0" src="nacl/mtproto_crypto.nmf" type="application/x-pnacl" /></div>').appendTo($('body'))[0];
     listener.addEventListener('load', function (e) {
       naClEmbed = listener.firstChild;
       console.log(dT(), 'NaCl ready');
@@ -727,7 +727,6 @@ angular.module('izhukov.utils', [])
 
 .service('ExternalResourcesManager', function ($q, $http) {
   var urlPromises = {};
-  var twitterAttached = false;
 
   function downloadImage (url) {
     if (urlPromises[url] !== undefined) {
@@ -741,18 +740,8 @@ angular.module('izhukov.utils', [])
       });
   }
 
-  function attachTwitterScript () {
-    twitterAttached = true;
-
-    $('<script>').appendTo('body')
-    // .on('load', function() {
-    // })
-    .attr('src', '//platform.twitter.com/widgets.js');
-  }
-
   return {
-    downloadImage: downloadImage,
-    attachTwitterScript: attachTwitterScript
+    downloadImage: downloadImage
   }
 })
 

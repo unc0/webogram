@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.2 - messaging web application for MTProto
+ * Webogram v0.3.3 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -831,6 +831,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       var newPeer = newDialog.peer || $scope.curDialog.peer || '';
       peerID = AppPeersManager.getPeerID(newPeer);
 
+
       if (peerID == $scope.curDialog.peerID && oldDialog.messageID == newDialog.messageID) {
         return false;
       }
@@ -869,10 +870,10 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       }
       if (pos > -1) {
         history = $scope.peerHistories[pos];
-        if (pos) {
-          $scope.peerHistories.splice(pos, 1);
-          $scope.peerHistories.unshift(history);
-        }
+        // if (pos) {
+        //   $scope.peerHistories.splice(pos, 1);
+        //   $scope.peerHistories.unshift(history);
+        // }
         return history;
       }
       history = {peerID: peerID, messages: []};
