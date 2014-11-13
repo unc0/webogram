@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.3 - messaging web application for MTProto
+ * Webogram v0.3.4 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -169,14 +169,11 @@ angular.module('myApp.directives', ['myApp.filters'])
   .directive('myExternalEmbed', function () {
 
     var twitterAttached = false;
+    var facebookAttached = false;
+    var gplusAttached = false;
     var twitterPendingWidgets = [];
+    var facebookPendingWidgets = [];
     var embedTag = Config.Modes.chrome_packed ? 'webview' : 'iframe';
-
-    function attachTwitterScript () {
-      twitterAttached = true;
-
-      $('<script>').appendTo('body').attr('src', '//platform.twitter.com/widgets.js');
-    }
 
     function link ($scope, element, attrs) {
       var embedData = $scope.$eval(attrs.myExternalEmbed);
@@ -191,7 +188,14 @@ angular.module('myApp.directives', ['myApp.filters'])
           var videoID = embedData[1];
           html = '<div class="im_message_media_embed im_message_video_embed"><' + embedTag + ' type="text/html" frameborder="0" ' +
                 'src="//www.youtube.com/embed/' + videoID +
-                '?autoplay=0&amp;controls=2"></' + embedTag + '></div>';
+                '?autoplay=0&amp;controls=2" webkitallowfullscreen mozallowfullscreen allowfullscreen></' + embedTag + '></div>';
+          break;
+
+        case 'vimeo':
+          var videoID = embedData[1];
+          html = '<div class="im_message_media_embed im_message_video_embed"><' + embedTag + ' type="text/html" frameborder="0" ' +
+                'src="//player.vimeo.com/video/' + videoID +
+                '?title=0&amp;byline=0&amp;portrait=0" webkitallowfullscreen mozallowfullscreen allowfullscreen></' + embedTag + '></div>';
           break;
 
         case 'instagram':
@@ -229,6 +233,56 @@ angular.module('myApp.directives', ['myApp.filters'])
               twttr.widgets.load(element[0]);
             }
             twitterPendingWidgets.push($scope);
+          };
+          break;
+
+        case 'facebook':
+          html = '<div class="im_message_facebook_embed"><div class="fb-post" data-href="' + embedData[1] + '" data-width="300"></div></div>';
+
+          callback = function () {
+            if (!facebookAttached) {
+              facebookAttached = true;
+              $('<script>')
+                .appendTo('body')
+                .on('load', function () {
+                  FB.Event.subscribe('xfbml.render', function (event) {
+                    for (var i = 0; i < facebookPendingWidgets.length; i++) {
+                      facebookPendingWidgets[i].$emit('ui_height');
+                    }
+                    facebookPendingWidgets = [];
+                  });
+                })
+                .attr('src', '//connect.facebook.net/en_US/sdk.js#xfbml=1&appId=254098051407226&version=v2.0');
+            }
+
+            else if (window.FB) {
+              FB.XFBML.parse(element[0]);
+            }
+            facebookPendingWidgets.push($scope);
+          };
+          break;
+
+        case 'gplus':
+          html = '<div class="im_message_gplus_embed"><div class="g-post" data-href="' + embedData[1] + '"></div></div>';
+
+          callback = function () {
+            if (!gplusAttached) {
+              gplusAttached = true;
+
+              window.___gcfg = {"parsetags": "explicit"};
+              $('<script>')
+                .appendTo('body')
+                .on('load', function () {
+                  gapi.post.go();
+                })
+                .attr('src', 'https://apis.google.com/js/plusone.js');
+            }
+            else if (window.gapi) {
+              gapi.post.go(element[0]);
+            }
+            element.one('load', function () {
+              $scope.$emit('ui_height');
+            });
           };
           break;
       }
@@ -1270,7 +1324,7 @@ angular.module('myApp.directives', ['myApp.filters'])
     }
   })
 
-  .directive('myLoadThumb', function(MtpApiFileManager) {
+  .directive('myLoadThumb', function(MtpApiFileManager, FileManager) {
 
     return {
       link: link,
@@ -1282,15 +1336,15 @@ angular.module('myApp.directives', ['myApp.filters'])
     function link ($scope, element, attrs) {
       var counter = 0;
 
-      var cachedSrc = MtpApiFileManager.getCachedFile(
+      var cachedBlob = MtpApiFileManager.getCachedFile(
         $scope.thumb &&
         $scope.thumb.location &&
         !$scope.thumb.location.empty &&
         $scope.thumb.location
       );
 
-      if (cachedSrc) {
-        element.attr('src', cachedSrc);
+      if (cachedBlob) {
+        element.attr('src', FileManager.getUrl(cachedBlob, 'image/jpeg'));
       }
       if ($scope.thumb && $scope.thumb.width && $scope.thumb.height) {
         element.attr('width', $scope.thumb.width);
@@ -1311,9 +1365,9 @@ angular.module('myApp.directives', ['myApp.filters'])
           return;
         }
 
-        var cachedSrc = MtpApiFileManager.getCachedFile(newLocation);
-        if (cachedSrc) {
-          element.attr('src', cachedSrc);
+        var cachedBlob = MtpApiFileManager.getCachedFile(newLocation);
+        if (cachedBlob) {
+          element.attr('src', FileManager.getUrl(cachedBlob, 'image/jpeg'));
           cleanup();
           return;
         }
@@ -1322,9 +1376,9 @@ angular.module('myApp.directives', ['myApp.filters'])
           element.attr('src', $scope.thumb.placeholder || 'img/blank.gif');
         }
 
-        MtpApiFileManager.downloadSmallFile($scope.thumb.location).then(function (url) {
+        MtpApiFileManager.downloadSmallFile($scope.thumb.location).then(function (blob) {
           if (counterSaved == counter) {
-            element.attr('src', url);
+            element.attr('src', FileManager.getUrl(blob, 'image/jpeg'));
             cleanup();
           }
         }, function (e) {
@@ -1348,7 +1402,7 @@ angular.module('myApp.directives', ['myApp.filters'])
 
   })
 
-  .directive('myLoadFullPhoto', function(MtpApiFileManager, _) {
+  .directive('myLoadFullPhoto', function(MtpApiFileManager, FileManager, _) {
 
     return {
       link: link,
@@ -1402,10 +1456,10 @@ angular.module('myApp.directives', ['myApp.filters'])
 
         $scope.progress = {enabled: true, percent: 0};
 
-        apiPromise.then(function (url) {
+        apiPromise.then(function (blob) {
           if (curJump == jump) {
             $scope.progress.enabled = false;
-            imgElement.src = url;
+            imgElement.src = FileManager.getUrl(blob, 'image/jpeg');
             resize();
           }
         }, function (e) {
@@ -1431,7 +1485,7 @@ angular.module('myApp.directives', ['myApp.filters'])
   })
 
 
-  .directive('myLoadVideo', function($sce, AppVideoManager, _) {
+  .directive('myLoadVideo', function($sce, AppVideoManager, ErrorService, _) {
 
     return {
       link: link,
@@ -1448,6 +1502,35 @@ angular.module('myApp.directives', ['myApp.filters'])
 
       downloadPromise.then(function () {
         $scope.$emit('ui_height');
+        onContentLoaded(function () {
+          var videoEl = $('video', element)[0];
+          if (videoEl) {
+            var errorAlready = false;
+            var onVideoError = function (event) {
+              if (errorAlready) {
+                return;
+              }
+              if (!event.target ||
+                  !event.target.error ||
+                  event.target.error.code == event.target.error.MEDIA_ERR_DECODE ||
+                  event.target.error.code == event.target.error.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+                errorAlready = true;
+                ErrorService.show({
+                  error: {
+                    type: 'MEDIA_TYPE_NOT_SUPPORTED',
+                    originalError: event.target && event.target.error
+                  }
+                });
+              }
+            };
+
+            videoEl.addEventListener('error', onVideoError, true);
+            $(videoEl).on('$destroy', function () {
+              errorAlready = true;
+              videoEl.removeEventListener('error', onVideoError);
+            });
+          }
+        });
       }, function (e) {
         console.log('Download video failed', e, $scope.video);
 
@@ -1516,7 +1599,7 @@ angular.module('myApp.directives', ['myApp.filters'])
     }
   })
 
-  .directive('myLoadDocument', function(MtpApiFileManager, AppDocsManager) {
+  .directive('myLoadDocument', function(MtpApiFileManager, AppDocsManager, FileManager) {
 
     return {
       link: link,
@@ -1567,7 +1650,8 @@ angular.module('myApp.directives', ['myApp.filters'])
 
       var checkSizesInt;
       var realImageWidth, realImageHeight;
-      AppDocsManager.downloadDoc($scope.document.id).then(function (url) {
+      AppDocsManager.downloadDoc($scope.document.id).then(function (blob) {
+        var url = FileManager.getUrl(blob, $scope.document.mime_type);
         var image = new Image();
         var limit = 100; // 2 sec
         var checkSizes = function (e) {
@@ -2012,7 +2096,7 @@ angular.module('myApp.directives', ['myApp.filters'])
     }
   })
 
-  .directive('myAudioPlayer', function ($timeout, $q, Storage, AppAudioManager, AppDocsManager) {
+  .directive('myAudioPlayer', function ($timeout, $q, Storage, AppAudioManager, AppDocsManager, ErrorService) {
 
     var currentPlayer = false;
     var audioVolume = 0.5;
@@ -2022,6 +2106,20 @@ angular.module('myApp.directives', ['myApp.filters'])
         audioVolume = newAudioVolume;
       }
     });
+
+    var onAudioError = function (event) {
+      if (!event.target ||
+          !event.target.error ||
+          event.target.error.code == event.target.error.MEDIA_ERR_DECODE ||
+          event.target.error.code == event.target.error.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+        ErrorService.show({
+          error: {
+            type: 'MEDIA_TYPE_NOT_SUPPORTED',
+            originalError: event.target && event.target.error
+          }
+        });
+      }
+    };
 
     return {
       link: link,
@@ -2077,6 +2175,33 @@ angular.module('myApp.directives', ['myApp.filters'])
 
           downloadPromise.then(function () {
             onContentLoaded(function () {
+              var audioEl = $('audio', element)[0];
+              if (audioEl) {
+                var errorAlready = false;
+                var onAudioError = function (event) {
+                  if (errorAlready) {
+                    return;
+                  }
+                  if (!event.target ||
+                      !event.target.error ||
+                      event.target.error.code == event.target.error.MEDIA_ERR_DECODE ||
+                      event.target.error.code == event.target.error.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+                    errorAlready = true;
+                    ErrorService.show({
+                      error: {
+                        type: 'MEDIA_TYPE_NOT_SUPPORTED',
+                        originalError: event.target && event.target.error
+                      }
+                    });
+                  }
+                };
+
+                audioEl.addEventListener('error', onAudioError, true);
+                $(audioEl).on('$destroy', function () {
+                  errorAlready = true;
+                  audioEl.removeEventListener('error', onAudioError);
+                });
+              }
               checkPlayer($scope.mediaPlayer.player);
               $scope.mediaPlayer.player.setVolume(audioVolume);
               $scope.mediaPlayer.player.play();

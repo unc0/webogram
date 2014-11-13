@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.3 - messaging web application for MTProto
+ * Webogram v0.3.4 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -182,11 +182,13 @@ angular.module('izhukov.utils', [])
     return 'data:' + mimeType + ';base64,' + bytesToBase64(fileData);
   }
 
-  function downloadFile (url, mimeType, fileName) {
-    // if (Config.Mobile) {
-    //   window.open(url, '_blank');
-    //   return;
-    // }
+  function downloadFile (blob, mimeType, fileName) {
+    if (window.navigator && navigator.msSaveBlob !== undefined) {
+      window.navigator.msSaveBlob(blob, fileName);
+    }
+
+    var url = getUrl(blob, mimeType);
+
     var anchor = $('<a>Download</a>')
               .css({position: 'absolute', top: 1, left: 1})
               .attr('href', url)
@@ -194,8 +196,14 @@ angular.module('izhukov.utils', [])
               .attr('download', fileName)
               .appendTo('body');
 
-    anchor[0].dataset.downloadurl = [mimeType, fileName, url].join(':');
-    anchor[0].click();
+    if (anchor[0].dataset) {
+      anchor[0].dataset.downloadurl = [mimeType, fileName, url].join(':');
+    }
+    try {
+      anchor[0].click();
+    } catch (e) {
+      window.open(url, '_blank');
+    }
     $timeout(function () {
       anchor.remove();
     }, 100);
@@ -488,7 +496,7 @@ angular.module('izhukov.utils', [])
       naClEmbed = false,
       taskID = 0,
       awaiting = {},
-      webCrypto = window.crypto && (window.crypto.subtle || window.crypto.webkitSubtle) || window.msCrypto && window.msCrypto.subtle,
+      webCrypto = window.crypto && (window.crypto.subtle || window.crypto.webkitSubtle)/* || window.msCrypto && window.msCrypto.subtle*/,
       useSha1Crypto = webCrypto && webCrypto.digest !== undefined,
       finalizeTask = function (taskID, result) {
         var deferred = awaiting[taskID];

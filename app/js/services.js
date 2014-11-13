@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.3 - messaging web application for MTProto
+ * Webogram v0.3.4 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -77,8 +77,9 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     angular.forEach(apiUsers, saveApiUser);
   };
 
-  function saveApiUser (apiUser) {
-    if (!angular.isObject(apiUser)) {
+  function saveApiUser (apiUser, noReplace) {
+    if (!angular.isObject(apiUser) ||
+        noReplace && angular.isObject(users[apiUser.id]) && users[apiUser.id].first_name) {
       return;
     }
 
@@ -602,7 +603,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   }
 })
 
-.service('AppMessagesManager', function ($q, $rootScope, $location, $filter, ApiUpdatesManager, AppUsersManager, AppChatsManager, AppPeersManager, AppPhotosManager, AppVideoManager, AppDocsManager, AppAudioManager, MtpApiManager, MtpApiFileManager, RichTextProcessor, NotificationsManager, SearchIndexManager, PeersSelectService,Storage, _) {
+.service('AppMessagesManager', function ($q, $rootScope, $location, $filter, ApiUpdatesManager, AppUsersManager, AppChatsManager, AppPeersManager, AppPhotosManager, AppVideoManager, AppDocsManager, AppAudioManager, MtpApiManager, MtpApiFileManager, RichTextProcessor, NotificationsManager, SearchIndexManager, PeersSelectService,Storage, FileManager, _) {
 
   var messagesStorage = {};
   var messagesForHistory = {};
@@ -1817,6 +1818,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   }
 
   function notifyAboutMessage (message) {
+    console.warn('notify about message');
     var peerID = getMessagePeer(message);
     var fromUser = AppUsersManager.getUser(message.from_id);
     var fromPhoto = AppUsersManager.getUserPhoto(message.from_id, 'User');
@@ -1883,8 +1885,8 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     notification.tag = peerString;
 
     if (notificationPhoto.location && !notificationPhoto.location.empty) {
-      MtpApiFileManager.downloadSmallFile(notificationPhoto.location, notificationPhoto.size).then(function (url) {
-        notification.image = url;
+      MtpApiFileManager.downloadSmallFile(notificationPhoto.location, notificationPhoto.size).then(function (blob) {
+        notification.image = FileManager.getUrl(blob, 'image/jpeg');
 
         if (message.unread) {
           NotificationsManager.notify(notification);
@@ -2337,7 +2339,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
           fullPhotoSize.location.dc_id, inputFileLocation, fullPhotoSize.size, {
           mime: mimeType,
           toFileEntry: writableFileEntry
-        }).then(function (url) {
+        }).then(function () {
           // console.log('file save done');
         }, function (e) {
           console.log('photo download failed', e);
@@ -2346,8 +2348,8 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     }, function () {
       MtpApiFileManager.downloadFile(
         fullPhotoSize.location.dc_id, inputFileLocation, fullPhotoSize.size, {mime: mimeType}
-      ).then(function (url) {
-        FileManager.download(url, mimeType, fileName);
+      ).then(function (blob) {
+        FileManager.download(blob, mimeType, fileName);
       }, function (e) {
         console.log('photo download failed', e);
       });
@@ -2487,6 +2489,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   function downloadVideo (videoID, toFileEntry) {
     var video = videos[videoID],
         historyVideo = videosForHistory[videoID] || video || {},
+        mimeType = video.mime_type || 'video/ogg',
         inputFileLocation = {
           _: 'inputVideoFileLocation',
           id: videoID,
@@ -2496,11 +2499,12 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     historyVideo.progress = {enabled: !historyVideo.downloaded, percent: 1, total: video.size};
 
     var downloadPromise = MtpApiFileManager.downloadFile(video.dc_id, inputFileLocation, video.size, {
-      mime: video.mime_type || 'video/ogg',
+      mime: mimeType,
       toFileEntry: toFileEntry
     });
 
-    downloadPromise.then(function (url) {
+    downloadPromise.then(function (blob) {
+      var url = FileManager.getUrl(blob, mimeType);
       delete historyVideo.progress;
       historyVideo.url = $sce.trustAsResourceUrl(url);
       historyVideo.downloaded = true;
@@ -2533,8 +2537,8 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         downloadVideo(videoID, writableFileEntry);
       }
     }, function () {
-      downloadVideo(videoID).then(function (url) {
-        FileManager.download(url, mimeType, fileName);
+      downloadVideo(videoID).then(function (blob) {
+        FileManager.download(blob, mimeType, fileName);
       });
     });
   }
@@ -2606,7 +2610,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     doc.thumb = thumb;
 
     doc.canDownload = !(window.chrome && chrome.fileSystem && chrome.fileSystem.chooseEntry);
-    doc.withPreview = doc.canDownload && doc.mime_type.match(/^(image\/|application\/pdf)/) ? 1 : 0;
+    doc.withPreview = doc.canDownload && doc.mime_type.match(/^(image\/)/) ? 1 : 0;
 
     if (isGif && doc.thumb) {
       doc.isSpecial = 'gif';
@@ -2654,7 +2658,8 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       toFileEntry: toFileEntry
     });
 
-    downloadPromise.then(function (url) {
+    downloadPromise.then(function (blob) {
+      var url = FileManager.getUrl(blob, doc.mime_type);
       delete historyDoc.progress;
       historyDoc.url = $sce.trustAsResourceUrl(url);
       historyDoc.downloaded = true;
@@ -2698,8 +2703,8 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         downloadDoc(docID, writableFileEntry);
       }
     }, function () {
-      downloadDoc(docID).then(function (url) {
-        FileManager.download(url, doc.mime_type, doc.file_name);
+      downloadDoc(docID).then(function (blob) {
+        FileManager.download(blob, doc.mime_type, doc.file_name);
       });
     });
   }
@@ -2755,6 +2760,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   function downloadAudio (audioID, toFileEntry) {
     var audio = audios[audioID],
         historyAudio = audiosForHistory[audioID] || audio || {},
+        mimeType = audio.mime_type || 'audio/ogg',
         inputFileLocation = {
           _: 'inputAudioFileLocation',
           id: audioID,
@@ -2764,11 +2770,12 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     historyAudio.progress = {enabled: !historyAudio.downloaded, percent: 1, total: audio.size};
 
     var downloadPromise = MtpApiFileManager.downloadFile(audio.dc_id, inputFileLocation, audio.size, {
-      mime: audio.mime_type || 'audio/ogg',
+      mime: mimeType,
       toFileEntry: toFileEntry
     });
 
-    downloadPromise.then(function (url) {
+    downloadPromise.then(function (blob) {
+      var url = FileManager.getUrl(blob, mimeType);
       delete historyAudio.progress;
       historyAudio.url = $sce.trustAsResourceUrl(url);
       historyAudio.downloaded = true;
@@ -2801,8 +2808,8 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         downloadAudio(audioID, writableFileEntry);
       }
     }, function () {
-      downloadAudio(audioID).then(function (url) {
-        FileManager.download(url, mimeType, fileName);
+      downloadAudio(audioID).then(function (blob) {
+        FileManager.download(blob, mimeType, fileName);
       });
     });
   }
@@ -3108,9 +3115,12 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
   var regExp = new RegExp('((?:(ftp|https?)://|(?:mailto:)?([A-Za-z0-9._%+-]+@))(\\S*\\.\\S*[^\\s.;,(){}<>"\']))|(\\n)|(' + emojiUtf.join('|') + ')|(^|\\s)(#[' + regexAlphaNumericChars + ']{3,20})', 'i');
   var youtubeRegex = /(?:https?:\/\/)?(?:www\.)?youtu(?:|.be|be.com|.b)(?:\/v\/|\/watch\\?v=|e\/|(?:\/\??#)?\/watch(?:.+)v=)(.{11})(?:\&[^\s]*)?/;
+  var vimeoRegex = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/;
   var instagramRegex = /https?:\/\/(?:instagr\.am\/p\/|instagram\.com\/p\/)([a-zA-Z0-9\-\_]+)/i;
   var vineRegex = /https?:\/\/vine\.co\/v\/([a-zA-Z0-9\-\_]+)/i;
   var twitterRegex = /https?:\/\/twitter\.com\/.+?\/status\/\d+/i;
+  var facebookRegex = /https?:\/\/(?:www\.)?facebook\.com\/.+?\/posts\/\d+/i;
+  var gplusRegex = /https?:\/\/plus\.google\.com\/\d+\/posts\/[a-zA-Z0-9\-\_]+/i;
 
   return {
     wrapRichText: wrapRichText,
@@ -3247,14 +3257,27 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     if (embedUrlMatches = text.match(youtubeRegex)) {
       return ['youtube', embedUrlMatches[1]];
     }
+    if (embedUrlMatches = text.match(vimeoRegex)) {
+      return ['vimeo', embedUrlMatches[1]];
+    }
     else if (embedUrlMatches = text.match(instagramRegex)) {
       return ['instagram', embedUrlMatches[1]];
     }
     else if (embedUrlMatches = text.match(vineRegex)) {
       return ['vine', embedUrlMatches[1]];
     }
-    else if (embedUrlMatches = !Config.Modes.chrome_packed && text.match(twitterRegex)) {
-      return ['twitter', embedUrlMatches[0]];
+
+    if (!Config.Modes.chrome_packed) { // Need external JS
+      if (embedUrlMatches = text.match(twitterRegex)) {
+        return ['twitter', embedUrlMatches[0]];
+      }
+      else if (embedUrlMatches = text.match(facebookRegex)) {
+        return ['facebook', embedUrlMatches[0]];
+      }
+      // Sorry, GPlus widget has no `xfbml.render` like callback and is too wide.
+      // else if (embedUrlMatches = text.match(gplusRegex)) {
+      //   return ['gplus', embedUrlMatches[0]];
+      // }
     }
 
     return false;
@@ -3346,7 +3369,16 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
   navigator.vibrate = navigator.vibrate || navigator.mozVibrate || navigator.webkitVibrate;
 
-  var notificationsUiSupport = ('Notification' in window) || ('mozNotification' in navigator);
+  var notificationsMsSiteMode = false;
+  try {
+    if (window.external && window.external.msIsSiteMode()) {
+      notificationsMsSiteMode = true;
+    }
+  } catch (e) {};
+
+  var notificationsUiSupport = notificationsMsSiteMode ||
+                               ('Notification' in window) ||
+                               ('mozNotification' in navigator);
   var notificationsShown = {};
   var notificationIndex = 0;
   var notificationsCount = 0;
@@ -3501,17 +3533,16 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
     notificationsCount++;
 
-    if (!notificationsUiSupport ||
-        'Notification' in window && Notification.permission !== 'granted') {
-      return false;
-    }
-
     Storage.get('notify_nosound', 'notify_volume').then(function (settings) {
       if (!settings[0] && settings[1] === false || settings[1] > 0) {
         playSound(settings[1] || 0.5);
       }
     })
 
+    if (!notificationsUiSupport ||
+        'Notification' in window && Notification.permission !== 'granted') {
+      return false;
+    }
 
     Storage.get('notify_nodesktop', 'notify_novibrate').then(function (settings) {
       if (settings[0]) {
@@ -3534,6 +3565,14 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       }
       else if ('mozNotification' in navigator) {
         notification = navigator.mozNotification.createNotification(data.title, data.message || '', data.image || '');
+      }
+      else if (notificationsMsSiteMode) {
+        window.external.msSiteModeClearIconOverlay();
+        window.external.msSiteModeSetIconOverlay('img/icons/icon16.png', data.title);
+        window.external.msSiteModeActivate();
+        notification = {
+          index: idx
+        };
       }
       else {
         return;
@@ -3579,19 +3618,27 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         if (notification.close) {
           notification.close();
         }
+        else if (notificationsMsSiteMode &&
+                 notification.index == notificationIndex) {
+          window.external.msSiteModeClearIconOverlay();
+        }
       } catch (e) {}
       delete notificationsCount[key];
     }
   }
 
   function notificationsClear() {
-    angular.forEach(notificationsShown, function (notification) {
-      try {
-        if (notification.close) {
-          notification.close()
-        }
-      } catch (e) {}
-    });
+    if (notificationsMsSiteMode) {
+      window.external.msSiteModeClearIconOverlay();
+    } else {
+      angular.forEach(notificationsShown, function (notification) {
+        try {
+          if (notification.close) {
+            notification.close()
+          }
+        } catch (e) {}
+      });
+    }
     notificationsShown = {};
     notificationsCount = 0;
   }
