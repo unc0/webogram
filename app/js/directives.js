@@ -26,6 +26,13 @@ angular.module('myApp.directives', ['myApp.filters'])
     };
   })
 
+  .directive('myFooter', function() {
+    return {
+      restrict: 'AE',
+      templateUrl: templateUrl('footer')
+    };
+  })
+
   .directive('myDialog', function() {
     return {
       restrict: 'AE',
@@ -187,28 +194,28 @@ angular.module('myApp.directives', ['myApp.filters'])
         case 'youtube':
           var videoID = embedData[1];
           html = '<div class="im_message_media_embed im_message_video_embed"><' + embedTag + ' type="text/html" frameborder="0" ' +
-                'src="//www.youtube.com/embed/' + videoID +
+                'src="https://www.youtube.com/embed/' + videoID +
                 '?autoplay=0&amp;controls=2" webkitallowfullscreen mozallowfullscreen allowfullscreen></' + embedTag + '></div>';
           break;
 
         case 'vimeo':
           var videoID = embedData[1];
           html = '<div class="im_message_media_embed im_message_video_embed"><' + embedTag + ' type="text/html" frameborder="0" ' +
-                'src="//player.vimeo.com/video/' + videoID +
+                'src="https://player.vimeo.com/video/' + videoID +
                 '?title=0&amp;byline=0&amp;portrait=0" webkitallowfullscreen mozallowfullscreen allowfullscreen></' + embedTag + '></div>';
           break;
 
         case 'instagram':
           var instaID = embedData[1];
           html = '<div class="im_message_media_embed im_message_insta_embed"><' + embedTag + ' type="text/html" frameborder="0" ' +
-                'src="//instagram.com/p/' + instaID +
+                'src="https://instagram.com/p/' + instaID +
                 '/embed/"></' + embedTag + '></div>';
           break;
 
         case 'vine':
           var vineID = embedData[1];
           html = '<div class="im_message_media_embed im_message_vine_embed"><' + embedTag + ' type="text/html" frameborder="0" ' +
-                'src="//vine.co/v/' + vineID + '/embed/simple"></' + embedTag + '></div>';
+                'src="https://vine.co/v/' + vineID + '/embed/simple"></' + embedTag + '></div>';
           break;
 
         case 'twitter':
@@ -227,7 +234,7 @@ angular.module('myApp.directives', ['myApp.filters'])
                     twitterPendingWidgets = [];
                   });
                 })
-                .attr('src', '//platform.twitter.com/widgets.js');
+                .attr('src', 'https://platform.twitter.com/widgets.js');
             }
             else if (window.twttr) {
               twttr.widgets.load(element[0]);
@@ -252,7 +259,7 @@ angular.module('myApp.directives', ['myApp.filters'])
                     facebookPendingWidgets = [];
                   });
                 })
-                .attr('src', '//connect.facebook.net/en_US/sdk.js#xfbml=1&appId=254098051407226&version=v2.0');
+                .attr('src', 'https://connect.facebook.net/en_US/sdk.js#xfbml=1&appId=254098051407226&version=v2.0');
             }
 
             else if (window.FB) {
@@ -1427,11 +1434,11 @@ angular.module('myApp.directives', ['myApp.filters'])
 
       var jump = 0;
       $scope.$watchCollection('fullPhoto.location', function () {
-        var cachedSrc = MtpApiFileManager.getCachedFile($scope.thumbLocation),
+        var cachedBlob = MtpApiFileManager.getCachedFile($scope.thumbLocation),
             curJump = ++jump;
 
-        if (cachedSrc) {
-          imgElement.src = cachedSrc;
+        if (cachedBlob) {
+          imgElement.src = FileManager.getUrl(cachedBlob, 'image/jpeg');
           resize();
         } else {
           imgElement.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -1636,7 +1643,10 @@ angular.module('myApp.directives', ['myApp.filters'])
         $scope.imageWidth = wh.w;
         $scope.imageHeight = wh.h;
 
-        $scope.thumbSrc = MtpApiFileManager.getCachedFile(thumbPhotoSize.location);
+        var cachedBlob = MtpApiFileManager.getCachedFile(thumbPhotoSize.location);
+        if (cachedBlob) {
+          $scope.thumbSrc = FileManager.getUrl(cachedBlob, 'image/jpeg');
+        }
       }
 
       $scope.frameWidth = Math.max($scope.imageWidth, Math.min(600, fullWidth))

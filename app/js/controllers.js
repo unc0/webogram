@@ -11,7 +11,7 @@
 
 angular.module('myApp.controllers', ['myApp.i18n'])
 
-  .controller('AppWelcomeController', function($scope, $location, MtpApiManager, ErrorService, ChangelogNotifyService) {
+  .controller('AppWelcomeController', function($scope, $location, MtpApiManager, ErrorService, ChangelogNotifyService, LayoutSwitchService) {
     MtpApiManager.getUserID().then(function (id) {
       if (id) {
         $location.url('/im');
@@ -21,9 +21,10 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     });
 
     ChangelogNotifyService.checkUpdate();
+    LayoutSwitchService.start();
   })
 
-  .controller('AppLoginController', function ($scope, $rootScope, $location, $timeout, $modal, $modalStack, MtpApiManager, ErrorService, NotificationsManager, ChangelogNotifyService, IdleManager, _) {
+  .controller('AppLoginController', function ($scope, $rootScope, $location, $timeout, $modal, $modalStack, MtpApiManager, ErrorService, NotificationsManager, ChangelogNotifyService, IdleManager, LayoutSwitchService, _) {
 
     $modalStack.dismissAll();
     IdleManager.start();
@@ -32,6 +33,10 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       if (id) {
         $location.url('/im');
         return;
+      }
+      if (location.protocol == 'http:' &&
+          Config.App.domains.indexOf(location.hostname) != -1) {
+        location = 'https://web.telegram.org';
       }
     });
     var options = {dcID: 2, createNetworker: true},
@@ -79,17 +84,6 @@ angular.module('myApp.controllers', ['myApp.i18n'])
         }
         if (nearestDcResult.nearest_dc != nearestDcResult.this_dc) {
           MtpApiManager.getNetworker(nearestDcResult.nearest_dc, {createNetworker: true});
-        }
-      }, function (error) {
-        switch (error.type) {
-          case 'NETWORK_BAD_REQUEST':
-            if (location.protocol == 'https:') {
-              ErrorService.confirm({type: 'HTTPS_MIXED_FAIL'}).then(function () {
-                location = location.toString().replace(/^https:/, 'http:');
-              });
-              error.handled = true;
-            }
-            break;
         }
       });
     }
@@ -218,15 +212,6 @@ angular.module('myApp.controllers', ['myApp.i18n'])
           $scope.progress.enabled = false;
           console.log('sendCode error', error);
           switch (error.type) {
-            case 'NETWORK_BAD_REQUEST':
-              if (location.protocol == 'https:') {
-                ErrorService.confirm({type: 'HTTPS_MIXED_FAIL'}).then(function () {
-                  location = location.toString().replace(/^https:/, 'http:');
-                });
-                error.handled = true;
-              }
-              break;
-
             case 'PHONE_NUMBER_INVALID':
               $scope.error = {field: 'phone'};
               error.handled = true;
@@ -314,9 +299,10 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     };
 
     ChangelogNotifyService.checkUpdate();
+    LayoutSwitchService.start();
   })
 
-  .controller('AppIMController', function ($scope, $location, $routeParams, $modal, $rootScope, $modalStack, MtpApiManager, AppUsersManager, AppChatsManager, ContactsSelectService, ChangelogNotifyService, ErrorService, AppRuntimeManager) {
+  .controller('AppIMController', function ($scope, $location, $routeParams, $modal, $rootScope, $modalStack, MtpApiManager, AppUsersManager, AppChatsManager, ContactsSelectService, ChangelogNotifyService, ErrorService, AppRuntimeManager, HttpsMigrateService, LayoutSwitchService) {
 
     $scope.$on('$routeUpdate', updateCurDialog);
 
@@ -457,6 +443,8 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     }
 
     ChangelogNotifyService.checkUpdate();
+    HttpsMigrateService.start();
+    LayoutSwitchService.start();
   })
 
   .controller('AppImDialogsController', function ($scope, $location, $q, $timeout, $routeParams, MtpApiManager, AppUsersManager, AppChatsManager, AppMessagesManager, AppPeersManager, PhonebookContactsService, ErrorService) {
@@ -630,15 +618,6 @@ angular.module('myApp.controllers', ['myApp.i18n'])
 
         return result;
       }, function (error) {
-        if (error.type == 'NETWORK_BAD_REQUEST') {
-          if (location.protocol == 'https:') {
-            ErrorService.confirm({type: 'HTTPS_MIXED_FAIL'}).then(function () {
-              location = location.toString().replace(/^https:/, 'http:');
-            });
-            error.handled = true;
-          }
-        }
-
         if (error.code == 401) {
           MtpApiManager.logOut()['finally'](function () {
             location.hash = '/login';
@@ -1517,6 +1496,12 @@ angular.module('myApp.controllers', ['myApp.i18n'])
         });
       }
     };
+  })
+
+  .controller('AppFooterController', function ($scope, LayoutSwitchService) {
+    $scope.switchLayout = function (mobile) {
+      LayoutSwitchService.switchLayout(mobile);
+    }
   })
 
   .controller('PhotoModalController', function ($q, $scope, $rootScope, $modalInstance, AppPhotosManager, AppMessagesManager, AppPeersManager, PeersSelectService, ErrorService) {
@@ -2419,11 +2404,14 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     })
   })
 
-  .controller('ContactsModalController', function ($scope, $modal, $modalInstance, AppUsersManager, ErrorService) {
+  .controller('ContactsModalController', function ($scope, $timeout, $modal, $modalInstance, MtpApiManager, AppUsersManager, ErrorService) {
 
     $scope.contacts = [];
+    $scope.foundUsers = [];
     $scope.search = {};
     $scope.slice = {limit: 20, limitDelta: 20};
+
+    var jump = 0;
 
     resetSelected();
     $scope.disabledContacts = {};
@@ -2449,7 +2437,10 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     };
 
     function updateContacts (query) {
+      var curJump = ++jump;
+      var doneIDs = [];
       AppUsersManager.getContacts(query).then(function (contactsList) {
+        if (curJump != jump) return;
         $scope.contacts = [];
         $scope.slice.limit = 20;
 
@@ -2459,11 +2450,36 @@ angular.module('myApp.controllers', ['myApp.i18n'])
             user: AppUsersManager.getUser(userID),
             userPhoto: AppUsersManager.getUserPhoto(userID, 'User')
           }
+          doneIDs.push(userID);
           $scope.contacts.push(contact);
         });
         $scope.contactsEmpty = query ? false : !$scope.contacts.length;
         $scope.$broadcast('contacts_change');
       });
+
+      if (query && query.length >= 5) {
+        $timeout(function() {
+          if (curJump != jump) return;
+          MtpApiManager.invokeApi('contacts.search', {q: query, limit: 10}).then(function (result) {
+            AppUsersManager.saveApiUsers(result.users);
+            if (curJump != jump) return;
+            angular.forEach(result.results, function(contactFound) {
+              var userID = contactFound.user_id;
+              if (doneIDs.indexOf(userID) != -1) return;
+              $scope.contacts.push({
+                userID: userID,
+                user: AppUsersManager.getUser(userID),
+                peerString: AppUsersManager.getUserString(userID),
+                found: true
+              });
+            });
+          }, function (error) {
+            if (error.code == 400) {
+              error.handled = true;
+            }
+          });
+        }, 500);
+      }
     };
 
     $scope.$watch('search.query', updateContacts);
