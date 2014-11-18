@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.4 - messaging web application for MTProto
+ * Webogram v0.3.5 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -15,9 +15,14 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     MtpApiManager.getUserID().then(function (id) {
       if (id) {
         $location.url('/im');
-      } else {
-        $scope.showWelcome = true;
+        return;
       }
+      if (location.protocol == 'http:' &&
+          Config.App.domains.indexOf(location.hostname) != -1) {
+        location = 'https://web.telegram.org';
+        return;
+      }
+      $scope.showWelcome = true;
     });
 
     ChangelogNotifyService.checkUpdate();
@@ -36,7 +41,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       }
       if (location.protocol == 'http:' &&
           Config.App.domains.indexOf(location.hostname) != -1) {
-        location = 'https://web.telegram.org';
+        location = 'https://web.telegram.org/#/login';
       }
     });
     var options = {dcID: 2, createNetworker: true},
@@ -620,8 +625,13 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       }, function (error) {
         if (error.code == 401) {
           MtpApiManager.logOut()['finally'](function () {
-            location.hash = '/login';
-            AppRuntimeManager.reload();
+            if (location.protocol == 'http:' &&
+                Config.App.domains.indexOf(location.hostname) != -1) {
+              location = 'https://web.telegram.org/#/login';
+            } else {
+              location.hash = '/login';
+              AppRuntimeManager.reload();
+            }
           });
           error.handled = true;
         }

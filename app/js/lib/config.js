@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.4 - messaging web application for MTProto
+ * Webogram v0.3.5 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -21,7 +21,7 @@ Config = window.Config || {};
 Config.App = {
   id: 2496,
   hash: '8da85b0d5bfe62527e5b244c209159c3',
-  version: '0.3.4',
+  version: '0.3.5',
   domains: ['web.telegram.org', 'zhukov.github.io']
 };
 
@@ -29,6 +29,8 @@ Config.Modes = {
   test: location.search.indexOf('test=1') > 0,
   debug: location.search.indexOf('debug=1') > 0,
   ssl: location.search.indexOf('ssl=1') > 0 || location.protocol == 'https:',
+  nacl: location.search.indexOf('nacl=0')== -1,
+  webcrypto: location.search.indexOf('webcrypto=0')== -1,
   packed: location.protocol == 'app:' || location.protocol == 'chrome-extension:',
   ios_standalone: window.navigator.standalone && navigator.userAgent.match(/iOS|iPhone|iPad/),
   chrome_packed: window.chrome && chrome.app && chrome.app.window && true || false

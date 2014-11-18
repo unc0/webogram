@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.4 - messaging web application for MTProto
+ * Webogram v0.3.5 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -1818,7 +1818,6 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   }
 
   function notifyAboutMessage (message) {
-    console.warn('notify about message');
     var peerID = getMessagePeer(message);
     var fromUser = AppUsersManager.getUser(message.from_id);
     var fromPhoto = AppUsersManager.getUserPhoto(message.from_id, 'User');
@@ -3114,13 +3113,14 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
   var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
   var regExp = new RegExp('((?:(ftp|https?)://|(?:mailto:)?([A-Za-z0-9._%+-]+@))(\\S*\\.\\S*[^\\s.;,(){}<>"\']))|(\\n)|(' + emojiUtf.join('|') + ')|(^|\\s)(#[' + regexAlphaNumericChars + ']{3,20})', 'i');
-  var youtubeRegex = /(?:https?:\/\/)?(?:www\.)?youtu(?:|.be|be.com|.b)(?:\/v\/|\/watch\\?v=|e\/|(?:\/\??#)?\/watch(?:.+)v=)(.{11})(?:\&[^\s]*)?/;
+  var youtubeRegex = /(?:https?:\/\/)?(?:www\.)?youtu(?:|\.be|be\.com|\.b)(?:\/v\/|\/watch\\?v=|e\/|(?:\/\??#)?\/watch(?:.+)v=)(.{11})(?:\&[^\s]*)?/;
   var vimeoRegex = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/;
   var instagramRegex = /https?:\/\/(?:instagr\.am\/p\/|instagram\.com\/p\/)([a-zA-Z0-9\-\_]+)/i;
   var vineRegex = /https?:\/\/vine\.co\/v\/([a-zA-Z0-9\-\_]+)/i;
   var twitterRegex = /https?:\/\/twitter\.com\/.+?\/status\/\d+/i;
   var facebookRegex = /https?:\/\/(?:www\.)?facebook\.com\/.+?\/posts\/\d+/i;
   var gplusRegex = /https?:\/\/plus\.google\.com\/\d+\/posts\/[a-zA-Z0-9\-\_]+/i;
+  var soundcloudRegex = /https?:\/\/(?:soundcloud\.com|snd\.sc)\/([a-zA-Z0-9%\-\_]+)\/([a-zA-Z0-9%\-\_]+)/i;
 
   return {
     wrapRichText: wrapRichText,
@@ -3265,6 +3265,11 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     }
     else if (embedUrlMatches = text.match(vineRegex)) {
       return ['vine', embedUrlMatches[1]];
+    }
+    else if (embedUrlMatches = text.match(soundcloudRegex)) {
+      if (embedUrlMatches[1] != 'explore') {
+        return ['soundcloud', embedUrlMatches[0]];
+      }
     }
 
     if (!Config.Modes.chrome_packed) { // Need external JS
@@ -3927,9 +3932,6 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 .service('LayoutSwitchService', function (ErrorService, Storage, AppRuntimeManager, $window) {
 
   var started = false;
-  var resizeLayoutSplit = 480;
-  var layoutSplitMaxMobile = 600;
-  var layoutSplitMinMobile = 500;
   var confirmShown = false;
 
   function switchLayout(mobile) {
@@ -3949,13 +3951,13 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     if (!e && Config.Mobile && width <= 800) {
       return;
     }
-    var newMobile = width < 480;
+    var newMobile = width < 600;
     if (newMobile != Config.Mobile) {
       Storage.get('layout_confirmed').then(function (result) {
         if (result &&
             (result.mobile
-              ? width <= result.width
-              : width >= result.width
+              ? width == result.width
+              : width == result.width
             )
         ) {
           return false;
