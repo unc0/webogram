@@ -97,7 +97,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       apiUser.rFullName = RichTextProcessor.wrapRichText(apiUser.last_name, {noLinks: true, noLinebreaks: true}) || apiUser.rPhone || _('user_name_deleted');
     }
     apiUser.sortName = SearchIndexManager.cleanSearchText(apiUser.first_name + ' ' + (apiUser.last_name || ''));
-    apiUser.sortStatus = apiUser.status && (apiUser.status.expires || apiUser.status.was_online) || 0;
+    apiUser.sortStatus = getUserStatusForSort(apiUser.status);
 
 
     if (users[apiUser.id] === undefined) {
@@ -111,6 +111,26 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       safeReplaceObject(cachedPhotoLocations[apiUser.id], apiUser && apiUser.photo && apiUser.photo.photo_small || {empty: true});
     }
   };
+
+  function getUserStatusForSort(status) {
+    if (status) {
+      var expires = status.expires || status.was_online;
+      if (expires) {
+        return expires;
+      }
+      var timeNow = tsNow(true) + serverTimeOffset;
+      switch (status._) {
+        case 'userStatusRecently':
+          return tsNow(true) + serverTimeOffset - 86400 * 3;
+        case 'userStatusLastWeek':
+          return tsNow(true) + serverTimeOffset - 86400 * 7;
+          case 'userStatusLastMonth':
+          return tsNow(true) + serverTimeOffset - 86400 * 30;
+      }
+    }
+
+    return 0;
+  }
 
   function getUser (id) {
     if (angular.isObject(id)) {
@@ -163,9 +183,12 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   function updateUsersStatuses () {
     var timestampNow = tsNow(true) + serverTimeOffset;
     angular.forEach(users, function (user) {
-      if (user.status && user.status._ == 'userStatusOnline' &&
+      if (user.status &&
+          user.status._ == 'userStatusOnline' &&
           user.status.expires < timestampNow) {
-        user.status = {_: 'userStatusOffline', was_online: user.status.expires};
+        user.status = user.status.wasStatus || 
+                      {_: 'userStatusOffline', was_online: user.status.expires};
+        delete user.status.wasStatus;
         $rootScope.$broadcast('user_update', user.id);
       }
     });
@@ -173,8 +196,21 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
   function forceUserOnline (id) {
     var user = getUser(id);
-    if (user && (!user.status || user.status._ != 'userStatusOnline')) {
-      user.status = {_: 'userStatusOnline', expires: tsNow(true) + serverTimeOffset + 60};
+    if (user &&
+        user.status &&
+        user.status._ != 'userStatusOnline' &&
+        user.status._ != 'userStatusEmpty') {
+
+      var wasStatus;
+      if (user.status._ != 'userStatusOffline') {
+        delete user.status.wasStatus;
+        wasStatus != angular.copy(user.status);
+      }
+      user.status = {
+        _: 'userStatusOnline',
+        expires: tsNow(true) + serverTimeOffset + 60,
+        wasStatus: wasStatus
+      };
       $rootScope.$broadcast('user_update', id);
     }
   }
@@ -305,7 +341,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
             user = users[userID];
         if (user) {
           user.status = update.status;
-          user.sortStatus = update.status && (update.status.expires || update.status.was_online) || 0;
+          user.sortStatus = getUserStatusForSort(update.status);
           $rootScope.$broadcast('user_update', userID);
         }
         break;
@@ -1260,27 +1296,23 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         randomIDS = bigint(randomID[0]).shiftLeft(32).add(bigint(randomID[1])).toString(),
         historyStorage = historiesStorage[peerID],
         inputPeer = AppPeersManager.getInputPeerByID(peerID),
-        attachType, fileName;
+        attachType, apiFileName, realFileName;
 
     if (!options.isMedia) {
       attachType = 'document';
-      fileName = 'document.' + file.type.split('/')[1];
+      apiFileName = 'document.' + file.type.split('/')[1];
     } else if (['image/jpeg', 'image/png', 'image/bmp'].indexOf(file.type) >= 0) {
       attachType = 'photo';
-      fileName = 'photo.' + file.type.split('/')[1];
+      apiFileName = 'photo.' + file.type.split('/')[1];
     } else if (file.type.substr(0, 6) == 'video/') {
       attachType = 'video';
-      fileName = 'video.mp4';
+      apiFileName = 'video.mp4';
     } else if (file.type.substr(0, 6) == 'audio/') {
       attachType = 'audio';
-      fileName = 'audio.' + (file.type.split('/')[1] == 'ogg' ? 'ogg' : 'mp3');
+      apiFileName = 'audio.' + (file.type.split('/')[1] == 'ogg' ? 'ogg' : 'mp3');
     } else {
       attachType = 'document';
-      fileName = 'document.' + file.type.split('/')[1];
-    }
-
-    if (!file.name) {
-      file.name = fileName;
+      apiFileName = 'document.' + file.type.split('/')[1];
     }
 
     if (historyStorage === undefined) {
@@ -1291,7 +1323,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       var media = {
         _: 'messageMediaPending',
         type: attachType,
-        file_name: file.name,
+        file_name: file.name || apiFileName,
         size: file.size,
         progress: {percent: 1, total: file.size}
       };
@@ -1333,6 +1365,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
               uploadPromise = MtpApiFileManager.uploadFile(file);
 
           uploadPromise.then(function (inputFile) {
+            inputFile.name = apiFileName;
             uploaded = true;
             var inputMedia;
             switch (attachType) {
@@ -2503,9 +2536,11 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     });
 
     downloadPromise.then(function (blob) {
-      var url = FileManager.getUrl(blob, mimeType);
+      FileManager.getFileCorrectUrl(blob, mimeType).then(function (url) {
+        historyVideo.url = $sce.trustAsResourceUrl(url);
+      });
+
       delete historyVideo.progress;
-      historyVideo.url = $sce.trustAsResourceUrl(url);
       historyVideo.downloaded = true;
       console.log('video save done');
     }, function (e) {
@@ -2658,9 +2693,10 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     });
 
     downloadPromise.then(function (blob) {
-      var url = FileManager.getUrl(blob, doc.mime_type);
+      FileManager.getFileCorrectUrl(blob, doc.mime_type).then(function (url) {
+        historyDoc.url = $sce.trustAsResourceUrl(url);
+      })
       delete historyDoc.progress;
-      historyDoc.url = $sce.trustAsResourceUrl(url);
       historyDoc.downloaded = true;
       console.log('file save done');
     }, function (e) {
@@ -2774,9 +2810,10 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     });
 
     downloadPromise.then(function (blob) {
-      var url = FileManager.getUrl(blob, mimeType);
+      FileManager.getFileCorrectUrl(blob, mimeType).then(function (url) {
+        historyAudio.url = $sce.trustAsResourceUrl(url);
+      });
       delete historyAudio.progress;
-      historyAudio.url = $sce.trustAsResourceUrl(url);
       historyAudio.downloaded = true;
       console.log('audio save done');
     }, function (e) {
@@ -3397,29 +3434,31 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       titlePromise;
 
   $rootScope.$watch('idle.isIDLE', function (newVal) {
-    // console.log('isIDLE watch', newVal);
-    $interval.cancel(titlePromise);
-
     if (!newVal) {
-      document.title = titleBackup;
-      $('link[rel="icon"]:first').replaceWith(faviconBackupEl);
       notificationsClear();
-    } else {
-      titleBackup = document.title;
+    }
+    if (!Config.Navigator.mobile) {
+      $interval.cancel(titlePromise);
+      if (!newVal) {
+        document.title = titleBackup;
+        $('link[rel="icon"]:first').replaceWith(faviconBackupEl);
+      } else {
+        titleBackup = document.title;
 
-      titlePromise = $interval(function () {
-        var time = tsNow();
-        if (!notificationsCount || time % 2000 > 1000) {
-          document.title = titleBackup;
-          var curFav = $('link[rel="icon"]:first');
-          if (curFav.attr('href').indexOf('favicon_unread') != -1) {
-            curFav.replaceWith(faviconBackupEl);
+        titlePromise = $interval(function () {
+          var time = tsNow();
+          if (!notificationsCount || time % 2000 > 1000) {
+            document.title = titleBackup;
+            var curFav = $('link[rel="icon"]:first');
+            if (curFav.attr('href').indexOf('favicon_unread') != -1) {
+              curFav.replaceWith(faviconBackupEl);
+            }
+          } else {
+            document.title = langNotificationsPluralize(notificationsCount);
+            $('link[rel="icon"]:first').replaceWith(faviconNewEl);
           }
-        } else {
-          document.title = langNotificationsPluralize(notificationsCount);
-          $('link[rel="icon"]:first').replaceWith(faviconNewEl);
-        }
-      }, 1000);
+        }, 1000);
+      }
     }
   });
 

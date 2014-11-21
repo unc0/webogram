@@ -1128,7 +1128,7 @@ angular.module('myApp.directives', ['myApp.filters'])
             updateValue();
             $scope.draftMessage.send();
             $(element).trigger('message_send');
-            resetAfterSubmit();
+            resetTyping();
             return cancelEvent(e);
           }
         }
@@ -1140,7 +1140,7 @@ angular.module('myApp.directives', ['myApp.filters'])
         updateValue();
         $scope.draftMessage.send();
         $(element).trigger('message_send');
-        resetAfterSubmit();
+        resetTyping();
         return cancelEvent(e);
       });
 
@@ -1158,7 +1158,7 @@ angular.module('myApp.directives', ['myApp.filters'])
         }
       });
 
-      function resetAfterSubmit () {
+      function resetTyping () {
         lastTyping = 0;
         lastLength = 0;
       };
@@ -1169,6 +1169,7 @@ angular.module('myApp.directives', ['myApp.filters'])
           var html = $('<div>').text($scope.draftMessage.text || '').html();
           html = html.replace(/\n/g, '<br/>');
           $(richTextarea).html(html);
+          lastLength = html.length;
           updateHeight();
         }
       }
@@ -1206,6 +1207,7 @@ angular.module('myApp.directives', ['myApp.filters'])
         $scope.$on('ui_history_change', focusField);
       }
 
+      $scope.$on('ui_peer_change', resetTyping);
       $scope.$on('ui_peer_draft', updateRichTextarea);
 
       var sendAwaiting = false;
@@ -1233,17 +1235,7 @@ angular.module('myApp.directives', ['myApp.filters'])
 
         if (src.substr(0, 5) == 'data:') {
           remove = true;
-          src = src.substr(5).split(';');
-          var contentType = src[0];
-          var base64 = atob(src[1].split(',')[1]);
-          var array = new Uint8Array(base64.length);
-
-          for (var i = 0; i < base64.length; i++) {
-            array[i] = base64.charCodeAt(i);
-          }
-
-          var blob = new Blob([array], {type: contentType});
-
+          var blob = dataUrlToBlob(src);
           ErrorService.confirm({type: 'FILE_CLIPBOARD_PASTE'}).then(function () {
             $scope.draftMessage.files = [blob];
             $scope.draftMessage.isMedia = true;
@@ -1264,11 +1256,12 @@ angular.module('myApp.directives', ['myApp.filters'])
         var cData = (e.originalEvent || e).clipboardData,
             items = cData && cData.items || [],
             files = [],
-            i;
+            file, i;
 
         for (i = 0; i < items.length; i++) {
           if (items[i].kind == 'file') {
-            files.push(items[i].getAsFile());
+            file = items[i].getAsFile();
+            files.push(file);
           }
         }
 

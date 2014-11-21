@@ -7,7 +7,7 @@
 
 angular.module('izhukov.mtproto.wrapper', ['izhukov.utils', 'izhukov.mtproto'])
 
-.factory('MtpApiManager', function (Storage, MtpAuthorizer, MtpNetworkerFactory, MtpSingleInstanceService, ErrorService, $q) {
+.factory('MtpApiManager', function (Storage, MtpAuthorizer, MtpNetworkerFactory, MtpSingleInstanceService, ErrorService, qSync, $q) {
   var cachedNetworkers = {},
       cachedUploadNetworkers = {},
       cachedExportPromise = {},
@@ -65,9 +65,7 @@ angular.module('izhukov.mtproto.wrapper', ['izhukov.utils', 'izhukov.mtproto'])
     }
 
     if (cache[dcID] !== undefined) {
-      return {then: function (cb) {
-        cb(cache[dcID]);
-      }};
+      return qSync.when(cache[dcID]);
     }
 
     var akk = 'dc' + dcID + '_auth_key',
@@ -629,7 +627,7 @@ angular.module('izhukov.mtproto.wrapper', ['izhukov.utils', 'izhukov.mtproto'])
   var errorShowTime = 0;
 
   function start() {
-    if (!started) {
+    if (!started && !Config.Navigator.mobile && !Config.Modes.packed) {
       started = true;
 
       IdleManager.start();
@@ -671,7 +669,10 @@ angular.module('izhukov.mtproto.wrapper', ['izhukov.utils', 'izhukov.mtproto'])
           else if (idleInstance.time > time - 10000 &&
                    time > errorShowTime) {
 
-            ErrorService.alert(_('error_modal_warning_title'), _('error_modal_multiple_open_tabs'));
+            ErrorService.alert(
+              _('error_modal_warning_title_raw'),
+              _('error_modal_multiple_open_tabs_raw')
+            );
             errorShowTime += tsNow() + 60000;
           }
         }
