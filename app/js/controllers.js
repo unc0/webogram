@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.5 - messaging web application for MTProto
+ * Webogram v0.3.6 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -1523,12 +1523,6 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       AppPhotosManager.downloadPhoto($scope.photoID);
     };
 
-    if (!$scope.messageID || Config.Mobile) {
-      $scope.nav.next = function () {
-        $modalInstance.close();
-      }
-    }
-
     if (!$scope.messageID) {
       return;
     }
@@ -1544,12 +1538,13 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       });
     };
 
-
-    if (Config.Mobile) {
-      $scope.canForward = true;
-      $scope.canDelete = true;
-      return;
-    }
+    $scope.goToMessage = function () {
+      var messageID = $scope.messageID;
+      var peerID = AppMessagesManager.getMessagePeer(AppMessagesManager.getMessage(messageID));
+      var peerString = AppPeersManager.getPeerString(peerID);
+      $modalInstance.dismiss();
+      $rootScope.$broadcast('history_focus', {peerString: peerString, messageID: messageID});
+    };
 
     $scope['delete'] = function () {
       var messageID = $scope.messageID;
@@ -1563,21 +1558,24 @@ angular.module('myApp.controllers', ['myApp.i18n'])
         inputQuery = '',
         inputFilter = {_: 'inputMessagesFilterPhotos'},
         list = [$scope.messageID],
+        preloaded = {},
         maxID = $scope.messageID,
         hasMore = true;
+
+    preloaded[$scope.messageID] = true;
 
     updatePrevNext();
 
     AppMessagesManager.getSearch(inputPeer, inputQuery, inputFilter, 0, 1000).then(function (searchCachedResult) {
-      // console.log(dT(), 'search cache', searchCachedResult);
       if (searchCachedResult.history.indexOf($scope.messageID) >= 0) {
         list = searchCachedResult.history;
         maxID = list[list.length - 1];
 
         updatePrevNext();
+        preloadPhotos(+1);
       }
-      // console.log(dT(), list, maxID);
-    });
+      loadMore();
+    }, loadMore);
 
 
     var jump = 0;
@@ -1588,7 +1586,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
 
       var promise = index >= list.length ? loadMore() : $q.when();
       promise.then(function () {
-        if (curJump != jump || !hasMore) {
+        if (curJump != jump) {
           return;
         }
 
@@ -1606,9 +1604,32 @@ angular.module('myApp.controllers', ['myApp.i18n'])
         $scope.photoID = message.media.photo.id;
         $scope.photo = AppPhotosManager.wrapForFull($scope.photoID);
 
+        preloaded[$scope.messageID] = true;
+
         updatePrevNext();
+
+        if (sign > 0 && hasMore && list.indexOf(messageID) + 1 >= list.length) {
+          loadMore();
+        } else {
+          preloadPhotos(sign);
+        }
       });
     };
+
+    function preloadPhotos (sign) {
+      // var preloadOffsets = sign < 0 ? [-1,-2,1,-3,2] : [1,2,-1,3,-2];
+      var preloadOffsets = sign < 0 ? [-1,-2] : [1,2];
+      var index = list.indexOf($scope.messageID);
+      angular.forEach(preloadOffsets, function (offset) {
+        var messageID = list[index + offset];
+        if (messageID !== undefined && preloaded[messageID] === undefined) {
+          preloaded[messageID] = true;
+          var message = AppMessagesManager.getMessage(messageID);
+          var photoID = message.media.photo.id;
+          AppPhotosManager.preloadPhoto(photoID);
+        }
+      })
+    }
 
     var loadingPromise = false;
     function loadMore () {
@@ -1623,13 +1644,27 @@ angular.module('myApp.controllers', ['myApp.i18n'])
           hasMore = false;
         }
 
-        updatePrevNext();
+        updatePrevNext(searchResult.count);
         loadingPromise = false;
+
+        if (searchResult.history.length) {
+          return $q.reject();
+        }
+
+        preloadPhotos(+1);
       });
     };
 
-    function updatePrevNext () {
+    function updatePrevNext (count) {
       var index = list.indexOf($scope.messageID);
+      if (hasMore) {
+        if (count) {
+          $scope.count = Math.max(count, list.length);
+        }
+      } else {
+        $scope.count = list.length;
+      }
+      $scope.pos = $scope.count - index;
       $scope.nav.hasNext = index > 0;
       $scope.nav.hasPrev = hasMore || index < list.length - 1;
       $scope.canForward = $scope.canDelete = $scope.messageID > 0;
@@ -1670,8 +1705,6 @@ angular.module('myApp.controllers', ['myApp.i18n'])
         list = newList;
       }
     });
-
-    loadMore();
 
   })
 
@@ -1870,8 +1903,10 @@ angular.module('myApp.controllers', ['myApp.i18n'])
         userFullResult.user.phone = $scope.override.phone_number;
         userFullResult.user.first_name = $scope.override.first_name;
         userFullResult.user.last_name = $scope.override.last_name;
+        AppUsersManager.saveApiUser(userFullResult.user);
+      } else {
+        AppUsersManager.saveApiUser(userFullResult.user, true);
       }
-      AppUsersManager.saveApiUser(userFullResult.user, true);
       AppPhotosManager.savePhoto(userFullResult.profile_photo);
       if (userFullResult.profile_photo._ != 'photoEmpty') {
         $scope.userPhoto.id = userFullResult.profile_photo.id;
@@ -2038,7 +2073,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
         angular.forEach(userIDs, function (userID) {
           MtpApiManager.invokeApi('messages.addChatUser', {
             chat_id: $scope.chatID,
-            user_id: {_: 'inputUserContact', user_id: userID},
+            user_id: AppUsersManager.getUserInput(userID),
             fwd_limit: 100
           }).then(function (addResult) {
             ApiUpdatesManager.processUpdateMessage({
@@ -2592,7 +2627,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       $scope.group.creating = true;
       var inputUsers = [];
       angular.forEach($scope.userIDs, function(userID) {
-        inputUsers.push({_: 'inputUserContact', user_id: userID});
+        inputUsers.push(AppUsersManager.getUserInput(userID));
       });
       return MtpApiManager.invokeApi('messages.createChat', {
         title: $scope.group.name,

@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.5 - messaging web application for MTProto
+ * Webogram v0.3.6 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -214,6 +214,26 @@ angular.module('izhukov.utils', [])
       window.navigator.msSaveBlob(blob, fileName);
       return false;
     }
+
+    if (window.navigator && navigator.getDeviceStorage) {
+      var storageName = 'sdcard';
+      switch (mimeType.split('/')[0]) {
+        case 'video': storageName = 'videos'; break;
+        case 'audio': storageName = 'music'; break;
+        case 'image': storageName = 'pictures'; break;
+      }
+      var deviceStorage = navigator.getDeviceStorage(storageName);
+
+      var request = deviceStorage.addNamed(blob, fileName);
+
+      request.onsuccess = function () {
+        console.log('Device storage save result', this.result);
+      };
+      request.onerror = function () {
+      };
+      return;
+    }
+
     getFileCorrectUrl(blob, mimeType).then(function (url) {
       var anchor = document.createElementNS('http://www.w3.org/1999/xhtml', 'a');
       anchor.href = url;

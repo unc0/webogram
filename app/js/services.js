@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.5 - messaging web application for MTProto
+ * Webogram v0.3.6 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -609,6 +609,12 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         text = chat.title || '';
       }
       return text;
+    },
+    getPeerString: function (peerID) {
+      if (peerID > 0) {
+        return AppUsersManager.getUserString(peerID);
+      }
+      return AppChatsManager.getChatString(-peerID);
     },
     getOutputPeer: function (peerID) {
       return peerID > 0
@@ -1673,13 +1679,11 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     if (message.chatID = message.to_id.chat_id) {
       message.peerID = -message.chatID;
       message.peerData = AppChatsManager.getChat(message.chatID);
-      message.peerString = AppChatsManager.getChatString(message.chatID);
     } else {
       message.peerID = message.out ? message.to_id.user_id : message.from_id;
       message.peerData = AppUsersManager.getUser(message.peerID);
-      message.peerString = AppUsersManager.getUserString(message.peerID);
     }
-
+    message.peerString = AppPeersManager.getPeerString(message.peerID);
     message.peerPhoto = AppPeersManager.getPeerPhoto(message.peerID, 'User', 'Group');
     message.unreadCount = unreadCount;
 
@@ -2194,6 +2198,10 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   };
 
   function choosePhotoSize (photo, width, height) {
+    if (Config.Navigator.retina) {
+      width *= 2;
+      height *= 2;
+    }
     var bestPhotoSize = {_: 'photoSizeEmpty'},
         bestDiff = 0xFFFFFF;
 
@@ -2235,10 +2243,13 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     if (!photos[photoID]) {
       return;
     }
-    var photo = photos[photoID],
-        fullWidth = $(window).width() - 36,
-        fullHeight = $($window).height() - 150,
-        fullPhotoSize = choosePhotoSize(photo, fullWidth, fullHeight);
+    var photo = photos[photoID];
+    var fullWidth = $(window).width() - (Config.Mobile ? 20 : 32);
+    var fullHeight = $($window).height() - (Config.Mobile ? 150 : 116);
+    if (fullWidth > 800) {
+      fullWidth -= 208;
+    }
+    var fullPhotoSize = choosePhotoSize(photo, fullWidth, fullHeight);
 
     if (fullPhotoSize && !fullPhotoSize.preloaded) {
       fullPhotoSize.preloaded = true;
@@ -2297,23 +2308,22 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   }
 
   function wrapForFull (photoID) {
-    var photo = wrapForHistory(photoID),
-        fullWidth = $(window).width() - (Config.Mobile ? 20 : 36),
-        fullHeight = $($window).height() - 150,
-        fullPhotoSize = choosePhotoSize(photo, fullWidth, fullHeight),
-        full = {
+    var photo = wrapForHistory(photoID);
+    var fullWidth = $(window).width() - (Config.Mobile ? 0 : 32);
+    var fullHeight = $($window).height() - (Config.Mobile ? 0 : 116);
+    if (!Config.Mobile && fullWidth > 800) {
+      fullWidth -= 208;
+    }
+    var fullPhotoSize = choosePhotoSize(photo, fullWidth, fullHeight);
+    var full = {
           placeholder: 'img/placeholders/PhotoThumbModal.gif'
         };
-
-    if (fullWidth > 800) {
-      fullWidth -= 200;
-    }
 
     full.width = fullWidth;
     full.height = fullHeight;
 
     if (fullPhotoSize && fullPhotoSize._ != 'photoSizeEmpty') {
-      var wh = calcImageInBox(fullPhotoSize.w, fullPhotoSize.h, fullWidth, fullHeight, Config.Mobile);
+      var wh = calcImageInBox(fullPhotoSize.w, fullPhotoSize.h, fullWidth, fullHeight, true);
       full.width = wh.w;
       full.height = wh.h;
 
@@ -2344,6 +2354,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
     var modalInstance = $modal.open({
       templateUrl: templateUrl('photo_modal'),
+      windowTemplateUrl: templateUrl('media_modal_layout'),
       controller: scope.userID ? 'UserpicModalController' : 'PhotoModalController',
       scope: scope,
       windowClass: 'photo_modal_window'
@@ -2460,8 +2471,8 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
   function wrapForFull (videoID) {
     var video = wrapForHistory(videoID),
-        fullWidth = Math.min($(window).width() - 60, 542),
-        fullHeight = $($window).height() - 150,
+        fullWidth = Math.min($(window).width() - (Config.Mobile ? 0 : 60), 542),
+        fullHeight = $($window).height() - (Config.Mobile ? 92 : 150),
         fullPhotoSize = video,
         full = {
           placeholder: 'img/placeholders/VideoThumbModal.gif',
@@ -2492,6 +2503,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
     return $modal.open({
       templateUrl: templateUrl('video_modal'),
+      windowTemplateUrl: templateUrl('media_modal_layout'),
       controller: 'VideoModalController',
       scope: scope,
       windowClass: 'video_modal_window'
@@ -2561,7 +2573,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
   function saveVideoFile (videoID) {
     var video = videos[videoID],
-        mimeType = video.mime_type || 'video/mpeg4',
+        mimeType = video.mime_type || 'video/mp4',
         fileExt = mimeType.split('.')[1] || 'mp4',
         fileName = 't_video' + videoID + '.' + fileExt,
         historyVideo = videosForHistory[videoID] || video || {};
@@ -2643,8 +2655,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     }
     doc.thumb = thumb;
 
-    doc.canDownload = !(window.chrome && chrome.fileSystem && chrome.fileSystem.chooseEntry);
-    doc.withPreview = doc.canDownload && doc.mime_type.match(/^(image\/)/) ? 1 : 0;
+    doc.withPreview = !Config.Mobile && doc.mime_type.match(/^(image\/)/) ? 1 : 0;
 
     if (isGif && doc.thumb) {
       doc.isSpecial = 'gif';
@@ -2722,6 +2733,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
     var modalInstance = $modal.open({
       templateUrl: templateUrl('document_modal'),
+      windowTemplateUrl: templateUrl('media_modal_layout'),
       controller: 'DocumentModalController',
       scope: scope,
       windowClass: 'document_modal_window'
@@ -3149,7 +3161,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
                         "\\uffa1-\\uffdc";                  // half width Hangul (Korean)
 
   var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
-  var regExp = new RegExp('((?:(ftp|https?)://|(?:mailto:)?([A-Za-z0-9._%+-]+@))(\\S*\\.\\S*[^\\s.;,(){}<>"\']))|(\\n)|(' + emojiUtf.join('|') + ')|(^|\\s)(#[' + regexAlphaNumericChars + ']{3,20})', 'i');
+  var regExp = new RegExp('((?:(ftp|https?)://|(?:mailto:)?([A-Za-z0-9._%+-]+@))(\\S*\\.\\S*[^\\s.;,(){}<>"\']))|(\\n)|(' + emojiUtf.join('|') + ')|(^|\\s)(#[' + regexAlphaNumericChars + ']{2,20})', 'i');
   var youtubeRegex = /(?:https?:\/\/)?(?:www\.)?youtu(?:|\.be|be\.com|\.b)(?:\/v\/|\/watch\\?v=|e\/|(?:\/\??#)?\/watch(?:.+)v=)(.{11})(?:\&[^\s]*)?/;
   var vimeoRegex = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/;
   var instagramRegex = /https?:\/\/(?:instagr\.am\/p\/|instagram\.com\/p\/)([a-zA-Z0-9\-\_]+)/i;
@@ -3304,7 +3316,8 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       return ['vine', embedUrlMatches[1]];
     }
     else if (embedUrlMatches = text.match(soundcloudRegex)) {
-      if (embedUrlMatches[1] != 'explore') {
+      var badFolders = 'explore,upload,pages,terms-of-use,mobile,jobs,imprint'.split(',');
+      if (badFolders.indexOf(embedUrlMatches[1]) != -1) {
         return ['soundcloud', embedUrlMatches[0]];
       }
     }

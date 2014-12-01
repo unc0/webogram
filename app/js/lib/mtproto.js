@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.5 - messaging web application for MTProto
+ * Webogram v0.3.6 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -17,7 +17,7 @@ angular.module('izhukov.mtproto', ['izhukov.utils'])
       {id: 3, host: '174.140.142.5', port: 80}
     ]
     : [
-      {id: 1, host: '173.240.5.1',   port: 80},
+      {id: 1, host: '149.154.175.50', port: 80},
       {id: 2, host: '149.154.167.51', port: 80},
       {id: 3, host: '174.140.142.6', port: 80},
       {id: 4, host: '149.154.167.91', port: 80},
