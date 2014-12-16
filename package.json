@@ -20,7 +20,8 @@
   },
   "scripts": {
     "start": "node server.js",
-    "build": "gulp"
+    "build": "gulp",
+    "nwpak": "gulp nwpak"
   },
   "repository": {
     "type": "git",
