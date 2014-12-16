@@ -28,7 +28,8 @@ Config.App = {
 Config.Modes = {
   test: location.search.indexOf('test=1') > 0,
   debug: location.search.indexOf('debug=1') > 0,
-  ssl: location.search.indexOf('ssl=1') > 0 || location.protocol == 'https:',
+  http: location.search.indexOf('http=1') > 0,
+  ssl: location.search.indexOf('ssl=1') > 0 || location.protocol == 'https:' && location.search.indexOf('ssl=0') == -1,
   nacl: location.search.indexOf('nacl=0')== -1,
   webcrypto: location.search.indexOf('webcrypto=0')== -1,
   packed: location.protocol == 'app:' || location.protocol == 'chrome-extension:',
@@ -42,7 +43,7 @@ Config.Navigator = {
   retina: window.devicePixelRatio > 1,
   ffos: navigator.userAgent.search(/mobi.+Gecko/i) != -1,
   touch: screen.width <= 768,
-  mobile: screen.width < 480 || navigator.userAgent.search(/iOS|iPhone OS|Android|BlackBerry|BB10|Series ?[64]0|J2ME|MIDP|opera mini|opera mobi|mobi.+Gecko|Windows Phone/i) != -1
+  mobile: screen.width && screen.width < 480 || navigator.userAgent.search(/iOS|iPhone OS|Android|BlackBerry|BB10|Series ?[64]0|J2ME|MIDP|opera mini|opera mobi|mobi.+Gecko|Windows Phone/i) != -1
 };
 
 Config.I18n = {

@@ -1238,8 +1238,7 @@ a.im_dialog_selected .im_dialog_date {
 .im_message_fwd_photo {
   width: 34px;
   height: 34px;
-
-  border-radius: 2px;
+  border-radius: 50%;
   overflow: hidden;
 }
 .im_message_from_photo .peer_initials,
@@ -1467,6 +1466,10 @@ div.im_message_video_thumb {
 .im_history_selectable .im_message_outer_wrap:hover .icon-document {
   background-color: #dae6f0;
   background-position: -2px -542px;
+}
+
+.im_history_selectable a {
+  pointer-events: none;
 }
 
 .im_message_document_link_disabled {
@@ -2547,14 +2550,14 @@ ce671b orange
 .user_color_8,
 .user_color_8:hover {color: #c07844;}
 
-.user_bgcolor_1 {background: #e57979;}
-.user_bgcolor_2 {background: #fba76f;}
+.user_bgcolor_1 {background: #cc90e2;}
+.user_bgcolor_2 {background: #80d066;}
 .user_bgcolor_3 {background: #ecd074;}
-.user_bgcolor_4 {background: #80d066;}
-.user_bgcolor_5 {background: #73cdd0;}
-.user_bgcolor_6 {background: #6fb1e4;}
-.user_bgcolor_7 {background: #cc90e2;}
-.user_bgcolor_8 {background: #f98bae;}
+.user_bgcolor_4 {background: #6fb1e4;}
+.user_bgcolor_5 {background: #e57979;}
+.user_bgcolor_6 {background: #f98bae;}
+.user_bgcolor_7 {background: #73cdd0;}
+.user_bgcolor_8 {background: #fba76f;}
 
 a.peer_photo_init:hover,
 a.peer_photo_init:active,
@@ -2970,7 +2973,7 @@ div.peer_modal_photo {
 }
 .peer_modal_photo .peer_initials {
   line-height: 72px;
-  font-size: 17px;
+  font-size: 22px;
 }
 .peer_modal_profile_name {
   font-size: 17px;
@@ -3041,6 +3044,12 @@ div.peer_modal_photo {
   background-position: -10px -250px;
 }
 
+.is_1x .md_modal_split_action_camera,
+.is_1x .md_modal_split_action_twitter,
+.is_1x .md_modal_split_action_msg {
+  background-image: url(../img/icons/ProfileIcons.png);
+}
+
 .md_modal_sections {
   padding-top: 17px
 }
@@ -3075,6 +3084,9 @@ div.peer_modal_photo {
   background: url(../img/icons/ProfileIcons_2x.png) 0 0 no-repeat;
   background-size: 40px 360px;
   position: absolute;
+}
+.is_1x .md_modal_section_icon {
+  background-image: url(../img/icons/ProfileIcons.png);
 }
 .md_modal_iconed_section_toggle .md_modal_section_icon {
   margin-top: 8px;

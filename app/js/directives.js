@@ -628,11 +628,11 @@ angular.module('myApp.directives', ['myApp.filters'])
         }
 
         if (attrs.modal) {
-          $(element).css({
-            height: $($window).height() -
-                    (panelWrap ? panelWrap.offsetHeight : 58) -
-                    (Config.Mobile ? 46 : 200)
-          });
+          var height = $($window).height() -
+                        (panelWrap ? panelWrap.offsetHeight : 58) -
+                        (Config.Mobile ? 46 : 200);
+          height = Math.min(350, height);
+          $(element).css({height: height});
           updateScroller();
           return;
         }
@@ -1674,7 +1674,7 @@ angular.module('myApp.directives', ['myApp.filters'])
           realImageWidth = image.width;
           realImageHeight = image.height;
           clearInterval(checkSizesInt);
-          
+
           var defaultWh = calcImageInBox(image.width, image.height, fullWidth, fullHeight, true);
           var zoomedWh = {w: realImageWidth, h: realImageHeight};
           if (defaultWh.w >= zoomedWh.w && defaultWh.h >= zoomedWh.h) {
@@ -2161,6 +2161,7 @@ angular.module('myApp.directives', ['myApp.filters'])
             initEl.removeClass(prevClass);
           }
           initEl.addClass(newClass);
+          prevClass = newClass;
         }
 
         updatePeerPhoto();
