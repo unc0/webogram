@@ -1100,7 +1100,7 @@ a.im_dialog_selected .im_dialog_message_text {
   height: 8px;
   border-radius: 5px;
   overflow: hidden;
-  margin: 10px 0 0;
+  margin: 12px 0 0;
 }
 
 a.im_dialog:hover .im_dialog_unread,
@@ -1213,8 +1213,8 @@ a.im_dialog_selected .im_dialog_date {
 
 
 .im_message_unread_split {
-  background: #f4f4f4;
-  color: #777;
+  background: #f0f4f7;
+  color: #8096a8;
   text-align: center;
   padding: 4px 10px;
   margin: 10px 0;
@@ -1236,19 +1236,19 @@ a.im_dialog_selected .im_dialog_date {
 .im_message_from_photo,
 .im_message_contact_photo,
 .im_message_fwd_photo {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   overflow: hidden;
 }
 .im_message_from_photo .peer_initials,
 .im_message_contact_photo .peer_initials,
 .im_message_fwd_photo .peer_initials {
-  line-height: 34px;
+  line-height: 36px;
 }
 a.im_message_from_photo,
 a.im_message_contact_photo {
-  margin: 1px 12px 0 0;
+  margin: 0 12px 0 0;
 }
 .non_osx .im_message_contact_name {
   font-size: 12px;
@@ -2905,7 +2905,7 @@ a.peer_photo_init:focus {
   display: inline-block;
   border: 0;
   outline: 0;
-  font-size: 12px;
+  font-size: 13px;
   padding: 3px 0;
   margin: 3px 0 0;
   width: 100%;
@@ -2940,8 +2940,11 @@ a.peer_photo_init:focus {
 a.md_modal_action {
   display: block;
   float: right;
-  color: #FFF;
+  color: #dde8f1;
   padding: 19px 15px 5px;
+}
+a.md_modal_action:hover {
+  color: #FFF;
 }
 a.md_modal_action_close {
   padding-right: 22px;
@@ -2952,6 +2955,7 @@ a.md_modal_action:active {
   text-decoration: none;
 }
 .md_modal_title {
+  font-weight: bold;
   padding: 18px 0 5px;
   font-size: 13px;
 }
@@ -2976,11 +2980,12 @@ div.peer_modal_photo {
   font-size: 22px;
 }
 .peer_modal_profile_name {
-  font-size: 17px;
+  font-size: 14px;
   padding: 15px 0 9px;
+  font-weight: bold;
 }
 .peer_modal_profile_description {
-  color: #beddf5;
+  color: #ccdeed;
 }
 
 .md_modal_split_actions_wrap {

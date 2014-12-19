@@ -558,11 +558,11 @@ a.im_panel_peer_photo .peer_initials {
 
 .im_panel_peer_online {
   background: #6ec26d;
-  border: 1px solid #FFF;
+  border: 2px solid #FFF;
   display: block;
-  width: 11px;
-  height: 11px;
-  border-radius: 6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 7px;
   overflow: hidden;
   position: absolute;
   margin-top: -12px;
@@ -988,7 +988,7 @@ a.im_panel_peer_photo .peer_initials {
   background: #fff;
 }
 .im_dialogs_scrollable_wrap a.im_dialog {
-  padding: 8px 16px;
+  padding: 7px 16px;
 }
 .im_dialogs_scrollable_wrap .active a.im_dialog {
   margin-right: -2px;
@@ -1007,9 +1007,8 @@ div.im_dialog_photo .peer_initials {
   line-height: 48px;
   font-size: 18px;
 }
-
 .im_dialog_message {
-  margin-top: 4px;
+  margin-top: 5px;
 }
 .active .im_dialog_date,
 .active a.im_dialog:hover .im_dialog_date,

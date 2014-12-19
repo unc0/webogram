@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.7 - messaging web application for MTProto
+ * Webogram v0.3.8 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -20,7 +20,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       if (location.protocol == 'http:' &&
           !Config.Modes.http &&
           Config.App.domains.indexOf(location.hostname) != -1) {
-        location.protocol = 'https:';
+        location.href = location.href.replace(/^http:/, 'https:');
         return;
       }
       $scope.showWelcome = true;
@@ -43,7 +43,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       if (location.protocol == 'http:' &&
           !Config.Modes.http &&
           Config.App.domains.indexOf(location.hostname) != -1) {
-        location.protocol = 'https:';
+        location.href = location.href.replace(/^http:/, 'https:');
       }
     });
     var options = {dcID: 2, createNetworker: true},
@@ -651,7 +651,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
             if (location.protocol == 'http:' &&
                 !Config.Modes.http &&
                 Config.App.domains.indexOf(location.hostname) != -1) {
-              location.protocol = 'https:';
+              location.href = location.href.replace(/^http:/, 'https:');
             } else {
               location.hash = '/login';
               AppRuntimeManager.reload();
