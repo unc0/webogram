@@ -5,6 +5,9 @@ var pj = require('./package.json');
 var $ = require('gulp-load-plugins')();
 var concat = require('gulp-concat');
 var path = require('path');
+var http = require('http');
+var livereload = require('gulp-livereload');
+var st = require('st');
 var NwBuilder = require('node-webkit-builder');
 
 // The generated file is being created at src
@@ -47,11 +50,13 @@ gulp.task('copy', function() {
       .pipe(gulp.dest('dist')),
     gulp.src(['app/img/**/*.wav'])
       .pipe(gulp.dest('dist/img')),
+    // gulp.src(['app/fonts/*'])
+    // .pipe(gulp.dest('dist/fonts')),
     gulp.src(['app/js/lib/polyfill.js', 'app/js/lib/bin_utils.js'])
       .pipe(gulp.dest('dist/js/lib')),
     gulp.src('app/vendor/closure/long.js')
       .pipe(gulp.dest('dist/vendor/closure')),
-    gulp.src(['app/css/desktop.css', 'app/css/mobile.css'])
+    gulp.src(['app/css/desktop.css', 'app/css/mobile.css', 'app/css/font_alt.css', 'app/css/nwctrl.css'])
       .pipe(gulp.dest('dist/css')),
     gulp.src('app/vendor/jsbn/jsbn_combined.js')
       .pipe(gulp.dest('dist/vendor/jsbn')),
@@ -203,6 +208,28 @@ gulp.task('package-dev', function() {
       .pipe($.replace(/(\/\*)?PRODUCTION_ONLY_END/g, '/*PRODUCTION_ONLY_END'))
       .pipe(gulp.dest('dist_package'))
     );
+});
+
+gulp.task('watchcss', function() {
+  gulp.src('app/css/*.css')
+    .pipe(livereload());
+});
+
+gulp.task('watchhtml', function() {
+  gulp.src('app/partials/**/*.html')
+    .pipe(livereload());
+});
+
+gulp.task('watch', ['server'], function() {
+  livereload.listen({ basePath: 'app' });
+  gulp.watch('app/css/*.css', ['watchcss']);
+  gulp.watch('app/partials/**/*.html', ['watchhtml']);
+});
+
+gulp.task('server', function(done) {
+  http.createServer(
+    st({ path: __dirname + '/app', index: 'index.html', cache: false })
+  ).listen(8000, done);
 });
 
 

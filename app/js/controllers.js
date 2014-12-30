@@ -336,7 +336,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     $scope.search = {};
     $scope.historyFilter = {mediaType: false};
     $scope.historyPeer = {};
-    $scope.historyState = {selectActions: false, typing: []};
+    $scope.historyState = {selectActions: false, typing: [], missedCount: 0};
 
     $scope.openSettings = function () {
       $modal.open({
@@ -344,7 +344,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
         controller: 'SettingsModalController',
         windowClass: 'settings_modal_window mobile_modal'
       });
-    }
+    };
 
     $scope.openContacts = function () {
       ContactsSelectService.selectContact().then(function (userID) {
@@ -399,10 +399,6 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       });
     };
 
-    $scope.openAbout = function () {
-      Webogram.gui.Shell.openExternal('https://github.com/zhukov/webogram');
-    };
-
     $scope.hideWindow = function () {
       Webogram.Window.hide();
     };
@@ -411,6 +407,9 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       Webogram.Window.close();
     };
 
+    $scope.openChangelog = function () {
+      ChangelogNotifyService.showChangelog(false);
+    }
 
     $scope.showPeerInfo = function () {
       if ($scope.curDialog.peerID > 0) {
@@ -528,6 +527,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
         offset++;
       }
       $scope.dialogs.unshift(wrappedDialog);
+      delete $scope.isEmpty.dialogs;
 
       if (!peersInDialogs[dialog.peerID]) {
         peersInDialogs[dialog.peerID] = true;
@@ -797,7 +797,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     $scope.selectedMsgs = {};
     $scope.selectedCount = 0;
     $scope.historyState.selectActions = false;
-    $scope.missedCount = 0;
+    $scope.historyState.missedCount = 0;
     $scope.state = {};
 
     $scope.toggleMessage = toggleMessage;
@@ -1054,7 +1054,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     };
 
     function loadHistory (forceRecent) {
-      $scope.missedCount = 0;
+      $scope.historyState.missedCount = 0;
 
       hasMore = false;
       $scope.skippedHistory = hasLess = false;
@@ -1306,7 +1306,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
           if (addedMessage.my) {
             returnToRecent();
           } else {
-            $scope.missedCount++;
+            $scope.historyState.missedCount++;
           }
           return;
         }
@@ -2521,7 +2521,16 @@ angular.module('myApp.controllers', ['myApp.i18n'])
 
     $scope.openChangelog = function () {
       ChangelogNotifyService.showChangelog(false);
-    }
+    };
+
+    $scope.logOut = function () {
+      ErrorService.confirm({type: 'LOGOUT'}).then(function () {
+        MtpApiManager.logOut().then(function () {
+          location.hash = '/login';
+          AppRuntimeManager.reload();
+        });
+      })
+    };
   })
 
   .controller('ChangelogModalController', function ($scope, $modal) {
