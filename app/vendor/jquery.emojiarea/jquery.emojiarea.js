@@ -172,23 +172,42 @@
 	/*! MODIFICATION START
 		 This function was added by Igor Zhukov to save recent used emojis.
 		 */
-	util.emojiInserted = function (emojiKey, menu) {
+	util.emojiInserted = function (emojiKey, menu, quickSelect) {
 		ConfigStorage.get('emojis_recent', function (curEmojis) {
 			curEmojis = curEmojis || defaultRecentEmojis || [];
+			if (curEmojis.length && typeof curEmojis[0] === 'string') {
+				var newCurEmojis = [];
+				for (var i = 0, l = curEmojis.length; i < l; i++) {
+					newCurEmojis.push([curEmojis[i], 1]);
+				}
+				curEmojis = newCurEmojis;
+			}
 
-			var pos = curEmojis.indexOf(emojiKey);
-			if (!pos) {
-				return false;
+			var exists = false;
+			for (var i = 0, l = curEmojis.length; i < l; i++) {
+				if (curEmojis[i][0] == emojiKey) {
+					exists = true;
+					curEmojis[i][1]++;
+					break;
+				}
 			}
-			if (pos != -1) {
-				curEmojis.splice(pos, 1);
-			}
-			curEmojis.unshift(emojiKey);
-			if (curEmojis.length > 42) {
-				curEmojis = curEmojis.slice(42);
+			if (exists) {
+				curEmojis.sort(function (a, b) {
+					if (a[1] == b[1]) return 0;
+					return a[1] > b[1] ? -1 : 1;
+				});
+			} else {
+				if (curEmojis.length > 41) {
+					curEmojis = curEmojis.slice(0, 41);
+				}
+				curEmojis.push([emojiKey, 1]);
 			}
 
 			ConfigStorage.set({emojis_recent: curEmojis});
+
+			if (quickSelect) {
+				quickSelect.changed = true;
+			}
 		})
 	};
 	/*! MODIFICATION END */
@@ -204,6 +223,11 @@
 		this.$editor.on('blur', function() { self.hasFocus = false; });
 
 		this.setupButton();
+
+		if (this.options.quickSelect) {
+			var $items = $(this.options.quickSelect);
+			this.quickSelect = new EmojiQuickSelectArea(self, $items);
+		}
 	};
 
 	EmojiArea.prototype.setupButton = function() {
@@ -275,7 +299,7 @@
 		if (!$.emojiarea.icons.hasOwnProperty(emoji)) return;
 		util.insertAtCursor(emoji, this.$textarea[0]);
 		/* MODIFICATION: Following line was added by Igor Zhukov, in order to save recent emojis */
-		util.emojiInserted(emoji, this.menu);
+		util.emojiInserted(emoji, this.menu, this.quickSelect);
 		this.$textarea.trigger('change');
 	};
 
@@ -394,7 +418,7 @@
 		/*! MODIFICATION END */
 
 		/* MODIFICATION: Following line was added by Igor Zhukov, in order to save recent emojis */
-		util.emojiInserted(emoji, this.menu);
+		util.emojiInserted(emoji, this.menu, this.quickSelect);
 
 
 		this.onChange();
@@ -597,12 +621,12 @@
 		if (path.length && path.charAt(path.length - 1) !== '/') {
 			path += '/';
 		}
-		
+
 		/*! MODIFICATION: Following function was added by Igor Zhukov, in order to add scrollbars to EmojiMenu */
 		var updateItems = function () {
 			self.$items.html(html.join(''));
 
-			if (!Config.Mobile) {
+			if (!Config.Mobile && self.$itemsWrap) {
 				setTimeout(function () {
 					self.$itemsWrap.nanoScroller();
 				}, 100);
@@ -622,7 +646,10 @@
 				curEmojis = curEmojis || defaultRecentEmojis || [];
 				var key, i;
 				for (i = 0; i < curEmojis.length; i++) {
-					key = curEmojis[i]
+					key = curEmojis[i];
+					if (Array.isArray(key)) {
+						key = key[0];
+					}
 					if (options[key]) {
 						html.push('<a href="javascript:void(0)" title="' + util.htmlEntities(key) + '">' + EmojiArea.createIcon(options[key], true) + '<span class="label">' + util.htmlEntities(key) + '</span></a>');
 					}
@@ -679,5 +706,31 @@
 			menu.show(emojiarea);
 		};
 	})();
+
+	var EmojiQuickSelectArea = function(emojiarea, $items) {
+		var self = this;
+		var $body = $(document.body);
+
+		this.emojiarea = emojiarea;
+		this.changed = false;
+		this.$items = $items;
+
+		this.load(0);
+		this.$items.on('click', 'a', function(e) {
+			var emoji = $('.label', $(this)).text();
+			self.onItemSelected(emoji);
+			self.changed = true;
+			e.stopPropagation();
+			return false;
+		});
+		$body.on('message_send', function(e) {
+			if (self.changed) {
+				self.load(0);
+				self.changed = false;
+			}
+		});
+	};
+
+	util.extend(EmojiQuickSelectArea.prototype, EmojiMenu.prototype);
 
 })(jQuery, window, document);

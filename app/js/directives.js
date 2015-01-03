@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.8 - messaging web application for MTProto
+ * Webogram v0.3.9 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -459,6 +459,9 @@ angular.module('myApp.directives', ['myApp.filters'])
           else if (searchField.value) {
             $(searchClear).trigger('click');
           }
+          else {
+            $scope.$emit('esc_no_more');
+          }
           return cancelEvent(e);
         }
 
@@ -858,10 +861,10 @@ angular.module('myApp.directives', ['myApp.filters'])
         var pr = parseInt($(scrollableWrap).css('paddingRight'))
         $(scrollableWrap).addClass('im_history_to_bottom');
         scrollableWrap.scrollHeight; // Some strange Chrome bug workaround
-        $(scrollable).css({bottom: 0, marginLeft: -Math.ceil(pr / 2)});
+        $(scrollable).css({bottom: 0, paddingRight: pr});
         onContentLoaded(function () {
           $(scrollableWrap).removeClass('im_history_to_bottom');
-          $(scrollable).css({bottom: '', marginLeft: ''});
+          $(scrollable).css({bottom: '', paddingRight: ''});
           updateSizes(true);
           moreNotified = false;
           lessNotified = false;
@@ -889,11 +892,11 @@ angular.module('myApp.directives', ['myApp.filters'])
 
         $(scrollableWrap).addClass('im_history_to_bottom');
         scrollableWrap.scrollHeight; // Some strange Chrome bug workaround
-        $(scrollable).css({bottom: -(sh - st - ch), marginLeft: -Math.ceil(pr / 2)});
+        $(scrollable).css({bottom: -(sh - st - ch), paddingRight: pr});
 
         var upd = function () {
             $(scrollableWrap).removeClass('im_history_to_bottom');
-            $(scrollable).css({bottom: '', marginLeft: ''});
+            $(scrollable).css({bottom: '', paddingRight: ''});
             if (scrollTopInitial >= 0) {
               changeScroll();
             } else {
@@ -1031,7 +1034,7 @@ angular.module('myApp.directives', ['myApp.filters'])
         var marginTop = scrollableWrap.offsetHeight
                         - historyMessagesEl.offsetHeight
                         - 20
-                        - (Config.Mobile ? 0 : 49);
+                        - (Config.Mobile ? 0 : 39);
 
         if (historyMessagesEl.offsetHeight > 0 && marginTop > 0) {
           $(historyMessagesEl).css({marginTop: marginTop});
@@ -1061,9 +1064,10 @@ angular.module('myApp.directives', ['myApp.filters'])
           fileSelects = $('input', element),
           dropbox = $('.im_send_dropbox_wrap', element)[0],
           emojiButton = $('.im_emoji_btn', element)[0],
+          emojiQuickSelect = !Config.Mobile ? $('.im_emoji_quick_select_area', element)[0] : false,
           editorElement = messageField,
           dragStarted, dragTimeout,
-          emojiArea = $(messageField).emojiarea({button: emojiButton, norealTime: true}),
+          emojiArea = $(messageField).emojiarea({button: emojiButton, norealTime: true, quickSelect: emojiQuickSelect}),
           emojiMenu = $('.emoji-menu', element)[0],
           submitBtn = $('.im_submit', element)[0],
           richTextarea = $('.emoji-wysiwyg-editor', element)[0];
@@ -2530,4 +2534,42 @@ angular.module('myApp.directives', ['myApp.filters'])
 
 
     };
+  })
+
+  .directive('mySubmitOnEnter', function () {
+
+    return {
+      link: link
+    };
+
+    function link($scope, element, attrs) {
+      element.on('keydown', function (event) {
+        if (event.keyCode == 13) {
+          element.trigger('submit');
+        }
+      });
+    };
+  })
+
+  .directive('myScrollToOn', function () {
+
+    return {
+      link: function($scope, element, attrs) {
+        var ev = attrs.myScrollToOn;
+        var doScroll = function () {
+          onContentLoaded(function () {
+            console.log(111,element, element.offset().top);
+            $('html, body').animate({
+              scrollTop: element.offset().top
+            }, 200);
+          });
+        };
+        if (ev == '$init') {
+          doScroll();
+        } else {
+          $scope.$on(ev, doScroll);
+        }
+      }
+    };
+
   })

@@ -1,6 +1,6 @@
 <div my-head></div>
 
-<div class="im_page_wrap" ng-class="{im_page_peer_not_selected: !curDialog.peer}">
+<div class="im_page_wrap clearfix" ng-class="{im_page_peer_not_selected: !curDialog.peer}">
 
   <div class="im_page_split clearfix">
 
@@ -8,8 +8,8 @@
       <div class="im_dialogs_panel">
         <div class="im_dialogs_search">
           <input class="form-control im_dialogs_search_field no_outline" type="search" placeholder="{{'modal_search' | i18n}}" ng-model="search.query"/>
-          <a class="im_dialogs_search_clear" ng-click="searchClear()" ng-show="search.query.length">
-            <i class="im_dialogs_search_clear"></i>
+          <a class="im_dialogs_search_clear tg_search_clear" ng-click="searchClear()" ng-show="search.query.length">
+            <i class="icon icon-search-clear"></i>
           </a>
         </div>
 
@@ -148,11 +148,11 @@
 
             <div class="im_edit_panel_wrap clearfix" ng-show="historyState.selectActions">
               <div class="im_edit_panel_border"></div>
-              <a class="im_edit_flush_link" ng-click="selectedFlush()" ng-switch="historyPeer.id > 0">
+              <a class="btn btn-md im_edit_flush_link" ng-click="selectedFlush()" ng-switch="historyPeer.id > 0">
                 <span ng-switch-when="true" my-i18n="im_delete_chat"></span>
                 <span ng-switch-default my-i18n="im_clear_history"></span>
               </a>
-              <a class="im_edit_cancel_link" ng-click="selectedCancel()" my-i18n="modal_cancel"></a>
+              <a class="btn btn-md im_edit_cancel_link" ng-click="selectedCancel()" my-i18n="modal_cancel"></a>
               <div class="im_edit_selected_actions" my-i18n>
                 <a class="btn btn-primary im_edit_forward_btn" ng-click="selectedForward()" ng-class="{disabled: !selectedCount}" ng-disabled="!selectedCount" my-i18n-format="im_forward"></a>
                 <a class="btn btn-danger im_edit_delete_btn" ng-click="selectedDelete()" ng-class="{disabled: !selectedCount}" ng-disabled="!selectedCount" my-i18n-format="im_delete"></a>
@@ -182,6 +182,8 @@
                     </div>
 
                     <div class="clearfix">
+                      <button type="submit" class="btn btn-md im_submit" my-i18n="im_submit_message"></button>
+
                       <div class="im_attach pull-left">
                         <input type="file" class="im_attach_input" size="28" multiple="true" title="{{'im_attach_file_title' | i18n}}" />
                         <i class="icon icon-paperclip"></i>
@@ -192,7 +194,8 @@
                         <i class="icon icon-camera"></i>
                       </div>
 
-                      <button type="submit" class="btn btn-md im_submit" my-i18n="im_submit_message"></button>
+                      <div class="im_emoji_quick_select_area"></div>
+
                     </div>
                   </form>
                 </div>

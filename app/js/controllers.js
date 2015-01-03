@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.8 - messaging web application for MTProto
+ * Webogram v0.3.9 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -23,14 +23,14 @@ angular.module('myApp.controllers', ['myApp.i18n'])
         location.href = location.href.replace(/^http:/, 'https:');
         return;
       }
-      $scope.showWelcome = true;
+      $location.url('/login');
     });
 
     ChangelogNotifyService.checkUpdate();
     LayoutSwitchService.start();
   })
 
-  .controller('AppLoginController', function ($scope, $rootScope, $location, $timeout, $modal, $modalStack, MtpApiManager, ErrorService, NotificationsManager, ChangelogNotifyService, IdleManager, LayoutSwitchService, _) {
+  .controller('AppLoginController', function ($scope, $rootScope, $location, $timeout, $modal, $modalStack, MtpApiManager, ErrorService, NotificationsManager, ChangelogNotifyService, IdleManager, LayoutSwitchService, TelegramMeWebService, _) {
 
     $modalStack.dismissAll();
     IdleManager.start();
@@ -44,8 +44,11 @@ angular.module('myApp.controllers', ['myApp.i18n'])
           !Config.Modes.http &&
           Config.App.domains.indexOf(location.hostname) != -1) {
         location.href = location.href.replace(/^http:/, 'https:');
+        return;
       }
+      TelegramMeWebService.setAuthorized(false);
     });
+
     var options = {dcID: 2, createNetworker: true},
         countryChanged = false,
         selectedCountry = false;
@@ -53,6 +56,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     $scope.credentials = {phone_country: '', phone_country_name: '', phone_number: '', phone_full: ''};
     $scope.progress = {};
     $scope.callPending = {};
+    $scope.about = {};
 
     $scope.chooseCountry = function () {
       var modal = $modal.open({
@@ -208,6 +212,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
           $scope.credentials.viaApp = sentCode._ == 'auth.sentAppCode';
           $scope.callPending.remaining = sentCode.send_call_timeout || 60;
           $scope.error = {};
+          $scope.about = {};
 
           callCheck();
 
@@ -279,6 +284,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
           error.handled = true;
           $scope.credentials.phone_code_valid = true;
           $scope.credentials.phone_unoccupied = true;
+          $scope.about = {};
           return;
         } else if (error.code == 400 && error.type == 'PHONE_NUMBER_OCCUPIED') {
           error.handled = true;
@@ -328,6 +334,10 @@ angular.module('myApp.controllers', ['myApp.i18n'])
         }
         $location.url('/im?p=' + peer + (peerData.messageID ? '&m=' + peerData.messageID : ''));
       }
+    });
+
+    $scope.$on('esc_no_more', function () {
+      $location.url('/im');
     });
 
 
@@ -474,7 +484,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     LocationParamsService.start();
   })
 
-  .controller('AppImDialogsController', function ($scope, $location, $q, $timeout, $routeParams, MtpApiManager, AppUsersManager, AppChatsManager, AppMessagesManager, AppPeersManager, PhonebookContactsService, ErrorService) {
+  .controller('AppImDialogsController', function ($scope, $location, $q, $timeout, $routeParams, MtpApiManager, AppUsersManager, AppChatsManager, AppMessagesManager, AppPeersManager, PhonebookContactsService, ErrorService, AppRuntimeManager) {
 
     $scope.dialogs = [];
     $scope.contacts = [];
@@ -1147,6 +1157,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     }
 
     function showEmptyHistory () {
+      safeReplaceObject($scope.historyPeer, {});
       safeReplaceObject($scope.state, {notSelected: true});
       peerHistory = false;
       hasMore = false;
@@ -2342,7 +2353,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
 
   })
 
-  .controller('SettingsModalController', function ($rootScope, $scope, $timeout, $modal, AppUsersManager, AppChatsManager, AppPhotosManager, MtpApiManager, Storage, NotificationsManager, MtpApiFileManager, ApiUpdatesManager, ChangelogNotifyService, ErrorService, _) {
+  .controller('SettingsModalController', function ($rootScope, $scope, $timeout, $modal, AppUsersManager, AppChatsManager, AppPhotosManager, MtpApiManager, Storage, NotificationsManager, MtpApiFileManager, ApiUpdatesManager, ChangelogNotifyService, AppRuntimeManager, ErrorService, _) {
 
     $scope.profile = {};
     $scope.photo = {};
