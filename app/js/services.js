@@ -687,7 +687,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   }
 })
 
-.service('AppMessagesManager', function ($q, $rootScope, $location, $filter, ApiUpdatesManager, AppUsersManager, AppChatsManager, AppPeersManager, AppPhotosManager, AppVideoManager, AppDocsManager, AppAudioManager, MtpApiManager, MtpApiFileManager, RichTextProcessor, NotificationsManager, SearchIndexManager, PeersSelectService, Storage, FileManager, TelegramMeWebService, _) {
+.service('AppMessagesManager', function ($q, $rootScope, $location, $filter, ApiUpdatesManager, AppUsersManager, AppChatsManager, AppPeersManager, AppPhotosManager, AppVideoManager, AppDocsManager, AppAudioManager, MtpApiManager, MtpApiFileManager, RichTextProcessor, NotificationsManager, SearchIndexManager, PeersSelectService, Storage, FileManager, TelegramMeWebService, StatusManager, _) {
 
   var messagesStorage = {};
   var messagesForHistory = {};
@@ -2100,16 +2100,19 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         dialogsStorage.dialogs.unshift(dialog);
         $rootScope.$broadcast('dialogs_update', dialog);
 
-
-        if ((Config.Mobile && $rootScope.selectedPeerID != peerID || $rootScope.idle.isIDLE) &&
+        if (($rootScope.selectedPeerID != peerID || $rootScope.idle.isIDLE) &&
             !message.out &&
             message.unread) {
-          NotificationsManager.getPeerMuted(peerID).then(function (muted) {
-            if (!message.unread || muted) {
-              return;
-            }
-            notifyAboutMessage(message);
-          });
+
+          var isMutedPromise = NotificationsManager.getPeerMuted(peerID);
+          var timeout = $rootScope.idle.isIDLE && StatusManager.isOtherDeviceActive() ? 30000 : 1000;
+          setTimeout(function () {
+            isMutedPromise.then(function (muted) {
+              if (message.unread && !muted) {
+                notifyAboutMessage(message);
+              }
+            })
+          }, timeout);
         }
         break;
 
@@ -2252,7 +2255,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   }
 })
 
-.service('AppPhotosManager', function ($modal, $window, $timeout, $rootScope, MtpApiManager, MtpApiFileManager, AppUsersManager, FileManager) {
+.service('AppPhotosManager', function ($modal, $window, $rootScope, MtpApiManager, MtpApiFileManager, AppUsersManager, FileManager) {
   var photos = {},
       windowW = $(window).width(),
       windowH = $(window).height();
@@ -2489,7 +2492,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 })
 
 
-.service('AppVideoManager', function ($sce, $rootScope, $modal, $window, $timeout, MtpApiFileManager, AppUsersManager, FileManager) {
+.service('AppVideoManager', function ($sce, $rootScope, $modal, $window, MtpApiFileManager, AppUsersManager, FileManager) {
   var videos = {},
       videosForHistory = {},
       windowW = $(window).width(),
@@ -2675,7 +2678,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   }
 })
 
-.service('AppDocsManager', function ($sce, $rootScope, $modal, $window, $timeout, $q, MtpApiFileManager, FileManager) {
+.service('AppDocsManager', function ($sce, $rootScope, $modal, $window, $q, MtpApiFileManager, FileManager) {
   var docs = {},
       docsForHistory = {},
       windowW = $(window).width(),
@@ -2877,7 +2880,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   }
 })
 
-.service('AppAudioManager', function ($sce, $rootScope, $modal, $window, $timeout, MtpApiFileManager, FileManager) {
+.service('AppAudioManager', function ($sce, $rootScope, $modal, $window, MtpApiFileManager, FileManager) {
   var audios = {};
   var audiosForHistory = {};
 
@@ -3508,10 +3511,25 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
 .service('StatusManager', function ($timeout, $rootScope, MtpApiManager, IdleManager) {
 
-  var toPromise, lastOnlineUpdated = 0, started = false;
+  var toPromise;
+  var lastOnlineUpdated = 0
+  var started = false;
+  var myID = 0;
+  var myOtherDeviceActive = false;
+
+  MtpApiManager.getUserID().then(function (id) {
+    myID = id;
+  });
+
+  $rootScope.$on('apiUpdate', function (e, update) {
+    if (update._ == 'updateUserStatus' && update.user_id == myID) {
+      myOtherDeviceActive = tsNow() + (update.status._ == 'userStatusOnline' ? 300000 : 0);
+    }
+  });
 
   return {
-    start: start
+    start: start,
+    isOtherDeviceActive: isOtherDeviceActive
   };
 
   function start() {
@@ -3547,9 +3565,20 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     }
   }
 
+  function isOtherDeviceActive() {
+    if (!myOtherDeviceActive) {
+      return false;
+    }
+    if (tsNow() > myOtherDeviceActive) {
+      myOtherDeviceActive = false;
+      return false;
+    }
+    return true;
+  }
+
 })
 
-.service('NotificationsManager', function ($rootScope, $window, $timeout, $interval, $q, _, MtpApiManager, AppPeersManager, IdleManager, Storage, AppRuntimeManager) {
+.service('NotificationsManager', function ($rootScope, $window, $interval, $q, _, MtpApiManager, AppPeersManager, IdleManager, Storage, AppRuntimeManager) {
 
   navigator.vibrate = navigator.vibrate || navigator.mozVibrate || navigator.webkitVibrate;
 
@@ -3567,9 +3596,10 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   var notificationIndex = 0;
   var notificationsCount = 0;
   var vibrateSupport = !!navigator.vibrate;
+  var nextSoundAt = false;
+  var prevSoundVolume = false;
   var peerSettings = {};
-  var faviconBackupEl = $('link[rel="icon"]:first'),
-      faviconNewEl = $('<link rel="icon" href="favicon_unread.ico" type="image/x-icon" />');
+  var faviconEl = $('link[rel="icon"]:first')[0];
   var langNotificationsPluralize = _.pluralize('page_title_pluralize_notifications');
 
   var titleBackup = document.title,
@@ -3583,7 +3613,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       $interval.cancel(titlePromise);
       if (!newVal) {
         document.title = titleBackup;
-        $('link[rel="icon"]:first').replaceWith(faviconBackupEl);
+        setFavicon();
       } else {
         titleBackup = document.title;
 
@@ -3591,13 +3621,10 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
           var time = tsNow();
           if (!notificationsCount || time % 2000 > 1000) {
             document.title = titleBackup;
-            var curFav = $('link[rel="icon"]:first');
-            if (curFav.attr('href').indexOf('favicon_unread') != -1) {
-              curFav.replaceWith(faviconBackupEl);
-            }
+            setFavicon();
           } else {
             document.title = langNotificationsPluralize(notificationsCount);
-            $('link[rel="icon"]:first').replaceWith(faviconNewEl);
+            setFavicon('favicon_unread.ico');
           }
         }, 1000);
       }
@@ -3654,6 +3681,15 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         peer: AppPeersManager.getInputPeerByID(peerID)
       }
     });
+  }
+
+  function setFavicon (href) {
+    var link = document.createElement('link');
+    link.rel = 'shortcut icon';
+    link.type = 'image/x-icon';
+    link.href = href || 'favicon.ico';
+    faviconEl.parentNode.replaceChild(link, faviconEl);
+    faviconEl = link;
   }
 
   function savePeerSettings (peerID, settings) {
@@ -3786,7 +3822,13 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   };
 
   function playSound (volume) {
-    var filename = 'img/sound_a.wav';
+    var now = tsNow();
+    if (nextSoundAt && now < nextSoundAt && prevSoundVolume == volume) {
+      return;
+    }
+    nextSoundAt = now + 1000;
+    prevSoundVolume = volume;
+    var filename = 'img/sound_a.mp3';
     var obj = $('#notify_sound').html('<audio autoplay="autoplay">' +
         '<source src="' + filename + '" type="audio/mpeg" />' +
         '<embed hidden="true" autostart="true" loop="false" volume="' + (volume * 100) +'" src="' + filename +'" />' +

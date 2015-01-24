@@ -118,6 +118,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
         updateCountry();
       }
       $scope.$broadcast('country_selected');
+      $scope.$broadcast('value_updated');
     }
 
     function updateCountry () {
@@ -337,7 +338,9 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     });
 
     $scope.$on('esc_no_more', function () {
-      $location.url('/im');
+      $rootScope.$apply(function () {
+        $location.url('/im');
+      })
     });
 
 
@@ -392,10 +395,19 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       });
     };
 
+    $scope.searchClear = function () {
+      $scope.search.query = '';
+      $scope.search.messages = false;
+      $scope.$broadcast('search_clear');
+    }
+
     $scope.dialogSelect = function (peerString, messageID) {
       var params = {peerString: peerString};
       if (messageID) {
         params.messageID = messageID;
+      }
+      else if ($scope.search.query) {
+        $scope.searchClear();
       }
       $rootScope.$broadcast('history_focus', params);
     };
@@ -608,11 +620,6 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       }
     });
 
-    $scope.searchClear = function () {
-      $scope.search.query = '';
-      $scope.search.messages = false;
-      $scope.$broadcast('search_clear');
-    }
     $scope.$on('ui_dialogs_search_clear', $scope.searchClear);
 
     var searchTimeoutPromise;
@@ -1157,6 +1164,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     }
 
     function showEmptyHistory () {
+      jump++;
       safeReplaceObject($scope.historyPeer, {});
       safeReplaceObject($scope.state, {notSelected: true});
       peerHistory = false;
@@ -1246,9 +1254,13 @@ angular.module('myApp.controllers', ['myApp.i18n'])
         angular.forEach($scope.selectedMsgs, function (t, messageID) {
           selectedMessageIDs.push(messageID);
         });
-        AppMessagesManager.deleteMessages(selectedMessageIDs).then(function () {
-          selectedCancel();
-        });
+        if (selectedMessageIDs.length) {
+          ErrorService.confirm({type: 'MESSAGES_DELETE', count: selectedMessageIDs.length}).then(function () {
+            AppMessagesManager.deleteMessages(selectedMessageIDs).then(function () {
+              selectedCancel();
+            });
+          });
+        }
       }
     }
 

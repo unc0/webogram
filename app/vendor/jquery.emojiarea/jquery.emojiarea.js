@@ -402,9 +402,11 @@
 			$img[0].attachEvent('onresizestart', function(e) { e.returnValue = false; }, false);
 		}
 
-		this.$editor.trigger('focus');
-		if (this.selection) {
-			util.restoreSelection(this.selection);
+		if (!this.hasFocus) {
+			this.$editor.trigger('focus');
+			if (this.selection) {
+				util.restoreSelection(this.selection);
+			}
 		}
 		try { util.replaceSelection($img[0]); } catch (e) {}
 
@@ -716,7 +718,7 @@
 		this.$items = $items;
 
 		this.load(0);
-		this.$items.on('click', 'a', function(e) {
+		this.$items.on('mousedown', 'a', function(e) {
 			var emoji = $('.label', $(this)).text();
 			self.onItemSelected(emoji);
 			self.changed = true;

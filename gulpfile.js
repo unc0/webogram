@@ -27,7 +27,7 @@ gulp.task('usemin', ['templates', 'enable-production'], function() {
     .pipe($.usemin({
       html: [$.minifyHtml({empty: true})],
       js: ['concat', $.ngAnnotate(), $.uglify({outSourceMap: false})],
-      css: [$.minifyCss(), 'concat']
+      css: ['concat', $.minifyCss({compatibility: true, keepBreaks: true})]
     }))
     .pipe(gulp.dest('dist'));
 });
@@ -149,7 +149,7 @@ gulp.task('add-appcache-manifest', function() {
   var sources = [
     './dist/**/*',
     '!dist/manifest.*',
-    '!dist/index.html',
+    '!dist/*.html',
     '!dist/fonts/*',
     '!dist/img/icons/icon*.png',
     '!dist/js/background.js'
