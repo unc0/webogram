@@ -24,7 +24,7 @@
           <li><a ng-click="openSettings()">
             <i class="icon icon-settings"></i><span my-i18n="im_settings"></span>
           </a></li>
-          <li><a href="https://telegram.org/faq" class="js-external-link">
+          <li><a ng-click="openFaq()">
             <i class="icon icon-faq"></i><span my-i18n="head_telegram_faq"></span>
           </a></li>
           <li><a href="" ng-click="openChangelog()">
@@ -77,11 +77,11 @@
 
           <a class="tg_head_btn" ng-switch-default ng-switch="historyPeer.id > 0" ng-click="showPeerInfo()">
             <div class="tg_head_peer_info" ng-switch-when="true">
-              <span class="tg_head_peer_title" ng-bind-html="historyPeer.data.rFullName"></span>
+              <span class="tg_head_peer_title" ng-bind-html="historyPeer.data.rFullName" dir="auto"></span>
               <span class="tg_head_peer_status" my-user-status="historyPeer.id"></span>
             </div>
             <div class="tg_head_peer_info" ng-switch-default>
-              <span class="tg_head_peer_title" ng-bind-html="historyPeer.data.rTitle"></span>
+              <span class="tg_head_peer_title" ng-bind-html="historyPeer.data.rTitle" dir="auto"></span>
               <span class="tg_head_peer_status">
                 <ng-pluralize count="historyPeer.data.participants_count"
                                  when="im_pluralize_participants">
