@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.9 - messaging web application for MTProto
+ * Webogram v0.4.0 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -15,6 +15,7 @@
   var emojis = {};
   var shortcuts = {};
   var spritesheetPositions = {};
+  var stickers = {};
   var index = false;
 
   var popular = 'joy,kissing_heart,heart,heart_eyes,blush,grin,+1,relaxed,pensive,smile,sob,kiss,unamused,flushed,stuck_out_tongue_winking_eye,see_no_evil,wink,smiley,cry,stuck_out_tongue_closed_eyes,scream,rage,smirk,disappointed,sweat_smile,kissing_closed_eyes,speak_no_evil,relieved,grinning,yum,laughing,ok_hand,neutral_face,confused'.split(',');
@@ -119,6 +120,7 @@
     emojis: emojis,
     shortcuts: shortcuts,
     spritesheetPositions: spritesheetPositions,
+    stickers: stickers,
     getPopularEmoji: getPopularEmoji,
     pushPopularEmoji: pushPopularEmoji,
     indexEmojis: indexEmojis,
@@ -274,6 +276,7 @@ EmojiTooltip.prototype.updateTabContents = function (tab) {
     self.contentEl.html(html.join(''));
 
     if (!Config.Mobile) {
+      self.contentWrapEl.nanoScroller({scroll: 'top'});
       setTimeout(function () {
         self.contentWrapEl.nanoScroller();
       }, 100);

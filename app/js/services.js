@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.9 - messaging web application for MTProto
+ * Webogram v0.4.0 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -507,9 +507,10 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
 })
 
-.service('AppChatsManager', function ($rootScope, $modal, _, MtpApiFileManager, MtpApiManager, AppUsersManager, RichTextProcessor) {
+.service('AppChatsManager', function ($q, $rootScope, $modal, _, MtpApiFileManager, MtpApiManager, AppUsersManager, AppPhotosManager, RichTextProcessor) {
   var chats = {},
       chatsFull = {},
+      chatFullPromises = {},
       cachedPhotoLocations = {};
 
   function saveApiChats (apiChats) {
@@ -545,6 +546,28 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     return chats[id] || {id: id, deleted: true};
   }
 
+  function getChatFull(id) {
+    if (chatsFull[id] !== undefined) {
+      return $q.when(chatsFull[id]);
+    }
+    if (chatFullPromises[id] !== undefined) {
+      return chatFullPromises[id];
+    }
+    return chatFullPromises[id] = MtpApiManager.invokeApi('messages.getFullChat', {
+      chat_id: id
+    }).then(function (result) {
+      saveApiChats(result.chats);
+      AppUsersManager.saveApiUsers(result.users);
+      if (result.full_chat && result.full_chat.chat_photo.id) {
+        AppPhotosManager.savePhoto(result.full_chat.chat_photo);
+      }
+      delete chatFullPromises[id];
+      $rootScope.$broadcast('chat_full_update', id);
+
+      return chatsFull[id] = result.full_chat;
+    });
+  }
+
   function hasChat (id) {
     return angular.isObject(chats[id]);
   }
@@ -557,7 +580,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     }
 
     return {
-      placeholder: 'img/placeholders/' + placeholder + 'Avatar' + chat.num + '@2x.png',
+      placeholder: 'img/placeholders/' + placeholder + 'Avatar' + (Config.Mobile ? chat.num : Math.ceil(chat.num / 2)) + '@2x.png',
       location: cachedPhotoLocations[id]
     };
   }
@@ -607,10 +630,25 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     });
   }
 
+  $rootScope.$on('apiUpdate', function (e, update) {
+    // console.log('on apiUpdate', update);
+    switch (update._) {
+      case 'updateChatParticipants':
+      var participants = update.participants;
+      var chatFull = chatsFull[participants.id];
+        if (chatFull !== undefined) {
+          chatFull.participants = update.participants;
+          $rootScope.$broadcast('chat_full_update', chatID);
+        }
+        break;
+    }
+  });
+
   return {
     saveApiChats: saveApiChats,
     saveApiChat: saveApiChat,
     getChat: getChat,
+    getChatFull: getChatFull,
     getChatPhoto: getChatPhoto,
     getChatString: getChatString,
     hasChat: hasChat,
@@ -914,8 +952,8 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       if (foundDialog && foundDialog[0] && foundDialog[0].unread_count > 1) {
         var unreadCount = foundDialog[0].unread_count;
         if (unreadSkip = (unreadCount > 50)) {
-          limit = 10;
-          unreadOffset = 6;
+          limit = 20;
+          unreadOffset = 16;
           offset = unreadCount - unreadOffset;
         } else {
           limit = Math.max(10, prerendered, unreadCount + 2);
@@ -1217,6 +1255,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
           if (messagesForDialogs[messageID]) {
             messagesForDialogs[messageID].unread = false;
           }
+          NotificationsManager.cancel('msg' + messageID);
         }
       }
     }
@@ -1252,20 +1291,27 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
       apiMessage.date -= serverTimeOffset;
 
-      if (apiMessage.media && apiMessage.media._ == 'messageMediaPhoto') {
-        AppPhotosManager.savePhoto(apiMessage.media.photo);
-      }
-      if (apiMessage.media && apiMessage.media._ == 'messageMediaVideo') {
-        AppVideoManager.saveVideo(apiMessage.media.video);
-      }
-      if (apiMessage.media && apiMessage.media._ == 'messageMediaDocument') {
-        AppDocsManager.saveDoc(apiMessage.media.document);
-      }
-      if (apiMessage.media && apiMessage.media._ == 'messageMediaAudio') {
-        AppAudioManager.saveAudio(apiMessage.media.audio);
-      }
-      if (apiMessage.media && apiMessage.media._ == 'messageMediaUnsupported') {
-        delete apiMessage.media.bytes;
+      if (apiMessage.media) {
+        switch (apiMessage.media._) {
+          case 'messageMediaEmpty':
+            delete apiMessage.media;
+            break;
+          case 'messageMediaPhoto':
+            AppPhotosManager.savePhoto(apiMessage.media.photo);
+            break;
+          case 'messageMediaVideo':
+            AppVideoManager.saveVideo(apiMessage.media.video);
+            break;
+          case 'messageMediaDocument':
+            AppDocsManager.saveDoc(apiMessage.media.document);
+            break;
+          case 'messageMediaAudio':
+            AppAudioManager.saveAudio(apiMessage.media.audio);
+            break;
+          case 'messageMediaUnsupported':
+            delete apiMessage.media.bytes;
+            break;
+        }
       }
       if (apiMessage.action && apiMessage.action._ == 'messageActionChatEditPhoto') {
         AppPhotosManager.savePhoto(apiMessage.action.photo);
@@ -1297,7 +1343,6 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         flags: 3,
         date: tsNow(true) + serverTimeOffset,
         message: text,
-        media: {_: 'messageMediaEmpty'},
         random_id: randomIDS,
         pending: true
       };
@@ -1775,8 +1820,6 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
     var message = angular.copy(messagesStorage[msgID]) || {id: msgID};
 
-    message.fromUser = AppUsersManager.getUser(message.from_id);
-
     if (message.chatID = message.to_id.chat_id) {
       message.peerID = -message.chatID;
       message.peerData = AppChatsManager.getChat(message.chatID);
@@ -1840,9 +1883,6 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
             {noLinks: true, noLinebreaks: true}
           );
           break;
-
-        case 'messageMediaEmpty':
-          delete message.media;
       }
     }
     else if (message.action) {
@@ -1859,9 +1899,13 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     }
 
     if (message.message && message.message.length) {
-      message.richMessage = RichTextProcessor.wrapRichText(message.message);
+      var options = {};
       if (!Config.Navigator.mobile) {
-        message.richUrlEmbed = RichTextProcessor.extractExternalEmbed(message.message);
+        options.extractUrlEmbed = true;
+      }
+      message.richMessage = RichTextProcessor.wrapRichText(message.message, options);
+      if (options.extractedUrlEmbed) {
+        message.richUrlEmbed = options.extractedUrlEmbed;
       }
     }
 
@@ -1974,13 +2018,17 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
     if (message.message) {
       notificationMessage = RichTextProcessor.wrapPlainText(message.message);
-    } else if (message.media && message.media._ != 'messageMediaEmpty') {
+    } else if (message.media) {
       switch (message.media._) {
         case 'messageMediaPhoto': notificationMessage = _('conversation_media_photo_raw'); break;
         case 'messageMediaVideo': notificationMessage = _('conversation_media_video_raw'); break;
         case 'messageMediaDocument':
           if (message.media.document.sticker) {
             notificationMessage = _('conversation_media_sticker');
+            var stickerEmoji = EmojiHelper.stickers[message.media.document.id];
+            if (stickerEmoji !== undefined) {
+              notificationMessage = RichTextProcessor.wrapPlainText(stickerEmoji) + ' (' + notificationMessage + ')';
+            }
           } else {
             notificationMessage = message.media.document.file_name || _('conversation_media_document_raw');
           }
@@ -2726,7 +2774,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   }
 })
 
-.service('AppDocsManager', function ($sce, $rootScope, $modal, $window, $q, MtpApiFileManager, FileManager) {
+.service('AppDocsManager', function ($sce, $rootScope, $modal, $window, $q, RichTextProcessor, MtpApiFileManager, FileManager) {
   var docs = {},
       docsForHistory = {},
       windowW = $(window).width(),
@@ -2753,7 +2801,12 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
           apiDoc.duration = attribute.duration;
           break;
         case 'documentAttributeSticker':
-          apiDoc.sticker = true;
+          apiDoc.sticker = 1;
+          var stickerEmoji = EmojiHelper.stickers[apiDoc.id];
+          if (stickerEmoji !== undefined) {
+            apiDoc.sticker = 2;
+            apiDoc.stickerEmoji = RichTextProcessor.wrapRichText(stickerEmoji, {noLinks: true, noLinebreaks: true});
+          }
           break;
         case 'documentAttributeImageSize':
           apiDoc.w = attribute.w;
@@ -2785,19 +2838,6 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     else if (isSticker) {
       width = Math.min(windowW - 80, Config.Mobile ? 210 : 260);
       height = Math.min(windowH - 100, Config.Mobile ? 210 : 260);
-      thumbPhotoSize = {
-        _: 'photoSize',
-        type: 'x',
-        location: {
-          _: 'inputDocumentFileLocation',
-          id: doc.id,
-          access_hash: doc.access_hash,
-          dc_id: doc.dc_id
-        },
-        w: doc.w,
-        h: doc.h,
-        size: doc.size
-      };
     } else {
       width = height = 100;
     }
@@ -2813,7 +2853,13 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       thumb.height = dim.h;
       thumb.location = thumbPhotoSize.location;
       thumb.size = thumbPhotoSize.size;
-    } else {
+    }
+    else if (isSticker) {
+      var dim = calcImageInBox(doc.w, doc.h, width, height);
+      thumb.width = dim.w;
+      thumb.height = dim.h;
+    }
+    else {
       thumb = false;
     }
     doc.thumb = thumb;
@@ -2865,7 +2911,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     historyDoc.progress = {enabled: !historyDoc.downloaded, percent: 1, total: doc.size};
 
     var downloadPromise = MtpApiFileManager.downloadFile(doc.dc_id, inputFileLocation, doc.size, {
-      mime: doc.mime_type,
+      mime: doc.mime_type || 'application/octet-stream',
       toFileEntry: toFileEntry
     });
 
@@ -3067,7 +3113,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   }
 
   function getStickerEmoji(docID) {
-    return stickersToEmoji[docID] || false;
+    return EmojiHelper.stickers[docID] || false;
   }
 
   function processRawStickers(stickers) {
@@ -3082,7 +3128,6 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
       var pack, emoticon, docID;
       var doneDocIDs = {};
-      stickersToEmoji = {};
       currentStickers = [];
       len1 = stickers.packs.length;
       for (i = 0; i < len1; i++) {
@@ -3091,8 +3136,8 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         len2 = pack.documents.length;
         for (j = 0; j < len2; j++) {
           docID = pack.documents[j];
-          if (stickersToEmoji[docID] === undefined) {
-            stickersToEmoji[docID] = emoticon;
+          if (EmojiHelper.stickers[docID] === undefined) {
+            EmojiHelper.stickers[docID] = emoticon;
           }
           if (doneDocIDs[docID] === undefined) {
             doneDocIDs[docID] = true;
@@ -3134,10 +3179,19 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     angular.forEach(currentStickers, function (docID) {
       var doc = AppDocsManager.getDoc(docID);
       var promise = MtpApiFileManager.downloadSmallFile(doc.thumb.location).then(function (blob) {
-        return {
-          id: docID,
-          src: FileManager.getUrl(blob, 'image/webp')
-        };
+        if (WebpManager.isWebpSupported()) {
+          return {
+            id: docID,
+            src: FileManager.getUrl(blob, 'image/webp')
+          };
+        }
+
+        return FileManager.getByteArray(blob).then(function (bytes) {
+          return {
+            id: docID,
+            src: WebpManager.getPngUrlFromData(bytes)
+          };
+        });
       });
       promises.push(promise);
     });
@@ -3207,8 +3261,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
             to_id: AppPeersManager.getOutputPeer(MtpApiManager.getUserID()),
             flags: 1,
             date: updateMessage.date,
-            message: updateMessage.message,
-            media: {_: 'messageMediaEmpty'}
+            message: updateMessage.message
           },
           pts: updateMessage.pts
         });
@@ -3230,8 +3283,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
             to_id: AppPeersManager.getOutputPeer(-updateMessage.chat_id),
             flags: 1,
             date: updateMessage.date,
-            message: updateMessage.message,
-            media: {_: 'messageMediaEmpty'}
+            message: updateMessage.message
           },
           pts: updateMessage.pts
         });
@@ -3437,19 +3489,18 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
   var regExp = new RegExp('(^|\\s)((?:https?://)?telegram\\.me/|@)([a-zA-Z\\d_]{5,32})|((?:(ftp|https?)://|(?:mailto:)?([A-Za-z0-9._%+-]+@))(\\S*\\.\\S*[^\\s.;,(){}<>"\']))|(\\n)|(' + emojiUtf.join('|') + ')|(^|\\s)(#[' + regexAlphaNumericChars + ']{2,20})', 'i');
 
-  var youtubeRegex = /(?:https?:\/\/)?(?:www\.)?youtu(?:|\.be|be\.com|\.b)(?:\/v\/|\/watch\\?v=|e\/|(?:\/\??#)?\/watch(?:.+)v=)(.{11})(?:\&[^\s]*)?/;
-  var vimeoRegex = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/;
-  var instagramRegex = /https?:\/\/(?:instagr\.am\/p\/|instagram\.com\/p\/)([a-zA-Z0-9\-\_]+)/i;
-  var vineRegex = /https?:\/\/vine\.co\/v\/([a-zA-Z0-9\-\_]+)/i;
-  var twitterRegex = /https?:\/\/twitter\.com\/.+?\/status\/\d+/i;
-  var facebookRegex = /https?:\/\/(?:www\.)?facebook\.com\/.+?\/posts\/\d+/i;
-  var gplusRegex = /https?:\/\/plus\.google\.com\/\d+\/posts\/[a-zA-Z0-9\-\_]+/i;
-  var soundcloudRegex = /https?:\/\/(?:soundcloud\.com|snd\.sc)\/([a-zA-Z0-9%\-\_]+)\/([a-zA-Z0-9%\-\_]+)/i;
+  var youtubeRegex = /^(?:https?:\/\/)?(?:www\.)?youtu(?:|\.be|be\.com|\.b)(?:\/v\/|\/watch\\?v=|e\/|(?:\/\??#)?\/watch(?:.+)v=)(.{11})(?:\&[^\s]*)?/;
+  var vimeoRegex = /^(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/;
+  var instagramRegex = /^https?:\/\/(?:instagr\.am\/p\/|instagram\.com\/p\/)([a-zA-Z0-9\-\_]+)/i;
+  var vineRegex = /^https?:\/\/vine\.co\/v\/([a-zA-Z0-9\-\_]+)/i;
+  var twitterRegex = /^https?:\/\/twitter\.com\/.+?\/status\/\d+/i;
+  var facebookRegex = /^https?:\/\/(?:www\.)?facebook\.com\/.+?\/posts\/\d+/i;
+  var gplusRegex = /^https?:\/\/plus\.google\.com\/\d+\/posts\/[a-zA-Z0-9\-\_]+/i;
+  var soundcloudRegex = /^https?:\/\/(?:soundcloud\.com|snd\.sc)\/([a-zA-Z0-9%\-\_]+)\/([a-zA-Z0-9%\-\_]+)/i;
 
   return {
     wrapRichText: wrapRichText,
-    wrapPlainText: wrapPlainText,
-    extractExternalEmbed: extractExternalEmbed
+    wrapPlainText: wrapPlainText
   };
 
   function getEmojiSpritesheetCoords(emojiCode) {
@@ -3516,17 +3567,23 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
               '</a>'
             );
           } else {
+            var url = match[5] + '://' + match[7];
             html.push(
               '<a href="',
-              encodeEntities(match[5] + '://' + match[7]),
+              encodeEntities(url),
               '" class="js-external-link">',
-              encodeEntities(match[5] + '://' + match[7]),
+              encodeEntities(url),
               '</a>'
             );
+            if (options.extractUrlEmbed &&
+                !options.extractedUrlEmbed) {
+              options.extractedUrlEmbed = findExternalEmbed(url);
+            }
           }
         } else {
           html.push(encodeEntities(match[0]));
         }
+
       }
       else if (match[8]) { // New line
         if (!options.noLinebreaks) {
@@ -3591,38 +3648,40 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     return $sce.trustAs('html', text);
   }
 
-  function extractExternalEmbed (text) {
+  function findExternalEmbed (url) {
     var embedUrlMatches,
         result;
 
-    if (embedUrlMatches = text.match(youtubeRegex)) {
+    if (embedUrlMatches = url.match(youtubeRegex)) {
       return ['youtube', embedUrlMatches[1]];
     }
-    if (embedUrlMatches = text.match(vimeoRegex)) {
+    if (embedUrlMatches = url.match(vimeoRegex)) {
       return ['vimeo', embedUrlMatches[1]];
     }
-    else if (embedUrlMatches = text.match(instagramRegex)) {
+    else if (embedUrlMatches = url.match(instagramRegex)) {
       return ['instagram', embedUrlMatches[1]];
     }
-    else if (embedUrlMatches = text.match(vineRegex)) {
+    else if (embedUrlMatches = url.match(vineRegex)) {
       return ['vine', embedUrlMatches[1]];
     }
-    else if (embedUrlMatches = text.match(soundcloudRegex)) {
+    else if (embedUrlMatches = url.match(soundcloudRegex)) {
       var badFolders = 'explore,upload,pages,terms-of-use,mobile,jobs,imprint'.split(',');
-      if (badFolders.indexOf(embedUrlMatches[1]) == -1) {
+      var badSubfolders = 'sets'.split(',');
+      if (badFolders.indexOf(embedUrlMatches[1]) == -1 &&
+          badSubfolders.indexOf(embedUrlMatches[2]) == -1) {
         return ['soundcloud', embedUrlMatches[0]];
       }
     }
 
     if (!Config.Modes.chrome_packed) { // Need external JS
-      if (embedUrlMatches = text.match(twitterRegex)) {
+      if (embedUrlMatches = url.match(twitterRegex)) {
         return ['twitter', embedUrlMatches[0]];
       }
-      else if (embedUrlMatches = text.match(facebookRegex)) {
+      else if (embedUrlMatches = url.match(facebookRegex)) {
         return ['facebook', embedUrlMatches[0]];
       }
       // Sorry, GPlus widget has no `xfbml.render` like callback and is too wide.
-      // else if (embedUrlMatches = text.match(gplusRegex)) {
+      // else if (embedUrlMatches = url.match(gplusRegex)) {
       //   return ['gplus', embedUrlMatches[0]];
       // }
     }
@@ -3764,6 +3823,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
   var titleBackup = document.title,
       titlePromise;
+  var prevFavicon;
 
   $rootScope.$watch('idle.isIDLE', function (newVal) {
     if (!newVal) {
@@ -3844,12 +3904,18 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   }
 
   function setFavicon (href) {
+    href = href || 'favicon.ico';
+    if (prevFavicon === href) {
+      return
+    }
     var link = document.createElement('link');
     link.rel = 'shortcut icon';
     link.type = 'image/x-icon';
-    link.href = href || 'favicon.ico';
+    link.href = href;
     faviconEl.parentNode.replaceChild(link, faviconEl);
     faviconEl = link;
+
+    prevFavicon = href
   }
 
   function savePeerSettings (peerID, settings) {

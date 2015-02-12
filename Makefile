@@ -12,3 +12,19 @@ publish:
 	./node_modules/gulp/bin/gulp.js publish
 	echo -n "Please open http://localhost:8000/dist/index.html and check if everything works fine." && read -e
 	cd dist && git add --all . && git commit -am "merged with master" && git push origin gh-pages
+
+bump:
+	./node_modules/gulp/bin/gulp.js bump
+
+
+txinstall:
+	curl -O https://raw.githubusercontent.com/pypa/pip/master/contrib/get-pip.py
+	sudo python get-pip.py
+	sudo pip install transifex-client
+
+txupdate:
+	tx pull -f
+
+txupload:
+	tx pull -f
+	tx push -s

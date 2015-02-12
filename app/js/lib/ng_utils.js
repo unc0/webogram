@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.9 - messaging web application for MTProto
+ * Webogram v0.4.0 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -182,6 +182,27 @@ angular.module('izhukov.utils', [])
     return 'data:' + mimeType + ';base64,' + bytesToBase64(fileData);
   }
 
+  function getByteArray(fileData) {
+    if (fileData instanceof Blob) {
+      var deferred = $q.defer();
+      try {
+        var reader = new FileReader();
+        reader.onloadend = function (e) {
+          deferred.resolve(new Uint8Array(e.target.result));
+        };
+        reader.onerror = function (e) {
+          deferred.reject(e);
+        };
+        reader.readAsArrayBuffer(fileData);
+
+        return deferred.promise;
+      } catch (e) {
+        return $q.reject(e);
+      }
+    }
+    return $q.when(fileData);
+  }
+
   function getDataUrl(blob) {
     var deferred;
     try {
@@ -254,7 +275,6 @@ angular.module('izhukov.utils', [])
       } catch (e) {
         console.error('Download click error', e);
         try {
-          console.error('Download click error', e);
           anchor[0].click();
         } catch (e) {
           window.open(url, '_blank');
@@ -275,6 +295,7 @@ angular.module('izhukov.utils', [])
     chooseSave: chooseSaveFile,
     getUrl: getUrl,
     getDataUrl: getDataUrl,
+    getByteArray: getByteArray,
     getFileCorrectUrl: getFileCorrectUrl,
     download: downloadFile
   };

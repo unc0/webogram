@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.9 - messaging web application for MTProto
+ * Webogram v0.4.0 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -528,6 +528,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     var jump = 0;
     var contactsJump = 0;
     var peersInDialogs = {};
+    var typingTimeouts = {};
     var contactsShown;
 
     $scope.$on('dialogs_need_more', function () {
@@ -589,6 +590,39 @@ angular.module('myApp.controllers', ['myApp.i18n'])
           }
           break;
         }
+      }
+    });
+
+    $scope.$on('apiUpdate', function (e, update) {
+      switch (update._) {
+        case 'updateUserTyping':
+        case 'updateChatUserTyping':
+          if (!AppUsersManager.hasUser(update.user_id)) {
+            if (update.chat_id) {
+              AppChatsManager.getChatFull(update.chat_id);
+            }
+            return;
+          }
+          var peerID = update._ == 'updateUserTyping'? update.user_id : -update.chat_id;
+          AppUsersManager.forceUserOnline(update.user_id);
+          for (var i = 0; i < $scope.dialogs.length; i++) {
+            if ($scope.dialogs[i].peerID == peerID) {
+              $scope.dialogs[i].typing = update.user_id;
+              $timeout.cancel(typingTimeouts[peerID]);
+
+              typingTimeouts[peerID] = $timeout(function () {
+                for (var i = 0; i < $scope.dialogs.length; i++) {
+                  if ($scope.dialogs[i].peerID == peerID) {
+                    if ($scope.dialogs[i].typing == update.user_id) {
+                      delete $scope.dialogs[i].typing;
+                    }
+                  }
+                }
+              }, 6000);
+              break;
+            }
+          }
+          break;
       }
     });
 
@@ -1110,8 +1144,8 @@ angular.module('myApp.controllers', ['myApp.i18n'])
 
       if ($scope.curDialog.messageID) {
         maxID = parseInt($scope.curDialog.messageID);
-        limit = 10;
-        backLimit = 10;
+        limit = 20;
+        backLimit = 20;
       }
       else if (forceRecent) {
         limit = 10;
@@ -2257,39 +2291,33 @@ angular.module('myApp.controllers', ['myApp.i18n'])
   .controller('ChatModalController', function ($scope, $timeout, $rootScope, $modal, AppUsersManager, AppChatsManager, AppPhotosManager, MtpApiManager, MtpApiFileManager, NotificationsManager, AppMessagesManager, AppPeersManager, ApiUpdatesManager, ContactsSelectService, ErrorService) {
 
     $scope.chatFull = AppChatsManager.wrapForFull($scope.chatID, {});
-
-    MtpApiManager.invokeApi('messages.getFullChat', {
-      chat_id: $scope.chatID
-    }).then(function (result) {
-      AppChatsManager.saveApiChats(result.chats);
-      AppUsersManager.saveApiUsers(result.users);
-      if (result.full_chat && result.full_chat.chat_photo.id) {
-        AppPhotosManager.savePhoto(result.full_chat.chat_photo);
-      }
-
-      $scope.chatFull = AppChatsManager.wrapForFull($scope.chatID, result.full_chat);
-      $scope.$broadcast('ui_height');
-    });
-
     $scope.settings = {notifications: true};
 
-    NotificationsManager.getPeerMuted(-$scope.chatID).then(function (muted) {
-      $scope.settings.notifications = !muted;
+    AppChatsManager.getChatFull($scope.chatID).then(function (chatFull) {
+      $scope.chatFull = AppChatsManager.wrapForFull($scope.chatID, chatFull);
+      $scope.$broadcast('ui_height');
 
-      $scope.$watch('settings.notifications', function(newValue, oldValue) {
-        if (newValue === oldValue) {
-          return false;
-        }
-        NotificationsManager.getPeerSettings(-$scope.chatID).then(function (settings) {
-          if (newValue) {
-            settings.mute_until = 0;
-          } else {
-            settings.mute_until = 2000000000;
+      NotificationsManager.savePeerSettings(-$scope.chatID, chatFull.notify_settings);
+
+      NotificationsManager.getPeerMuted(-$scope.chatID).then(function (muted) {
+        $scope.settings.notifications = !muted;
+
+        $scope.$watch('settings.notifications', function(newValue, oldValue) {
+          if (newValue === oldValue) {
+            return false;
           }
-          NotificationsManager.updatePeerSettings(-$scope.chatID, settings);
+          NotificationsManager.getPeerSettings(-$scope.chatID).then(function (settings) {
+            if (newValue) {
+              settings.mute_until = 0;
+            } else {
+              settings.mute_until = 2000000000;
+            }
+            NotificationsManager.updatePeerSettings(-$scope.chatID, settings);
+          });
         });
       });
     });
+
 
     function onStatedMessage (statedMessage) {
       AppMessagesManager.onStatedMessage(statedMessage);

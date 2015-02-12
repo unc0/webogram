@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.3.9 - messaging web application for MTProto
+ * Webogram v0.4.0 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -275,7 +275,14 @@ function listUniqSorted (list) {
 }
 
 function templateUrl (tplName) {
-  return 'partials/' + (Config.Mobile ? 'mobile' : 'desktop') + '/' + tplName + '.html';
+  var forceLayout = {
+    confirm_modal: 'desktop',
+    error_modal: 'desktop',
+    media_modal_layout: 'desktop',
+    slider: 'desktop',
+  };
+  var layout = forceLayout[tplName] || (Config.Mobile ? 'mobile' : 'desktop');
+  return 'partials/' + layout + '/' + tplName + '.html';
 }
 
 function encodeEntities(value) {
@@ -443,3 +450,97 @@ function versionCompare (ver1, ver2) {
 
 })(window);
 
+
+(function (global) {
+  var nativeWebpSupport = false;
+
+  var image = new Image();
+  image.onload = function () {
+    nativeWebpSupport = this.width === 2 && this.height === 1;
+  };
+  image.onerror = function () {
+    nativeWebpSupport = false;
+  };
+  image.src = 'data:image/webp;base64,UklGRjIAAABXRUJQVlA4ICYAAACyAgCdASoCAAEALmk0mk0iIiIiIgBoSygABc6zbAAA/v56QAAAAA==';
+
+  var canvas, context;
+
+
+  function getPngUrlFromData(data) {
+    var start = tsNow();
+
+    var decoder = new WebPDecoder();
+
+    var config = decoder.WebPDecoderConfig;
+    var buffer = config.j;
+    var bitstream = config.input;
+
+    if (!decoder.WebPInitDecoderConfig(config)) {
+      console.error('[webpjs] Library version mismatch!');
+      return false;
+    }
+
+    // console.log('[webpjs] status code', decoder.VP8StatusCode);
+
+    status = decoder.WebPGetFeatures(data, data.length, bitstream);
+    if (status != 0) {
+      console.error('[webpjs] status error', status);
+    }
+
+    var mode = decoder.WEBP_CSP_MODE;
+    buffer.J = 4;
+
+    status = decoder.WebPDecode(data, data.length, config);
+
+    ok = (status == 0);
+    if (!ok) {
+      console.error('[webpjs] decoding failed', status);
+      return false;
+    }
+
+    // console.log('[webpjs] decoded: ', buffer.width, buffer.height, bitstream.has_alpha, 'Now saving...');
+    var bitmap = buffer.c.RGBA.ma;
+
+    // console.log('[webpjs] done in ', tsNow() - start);
+
+    if (!bitmap) {
+      return false;
+    }
+    var biHeight = buffer.height;
+    var biWidth = buffer.width;
+
+    if (!canvas || !context) {
+      canvas = document.createElement('canvas');
+      context = canvas.getContext('2d');
+    } else {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    canvas.height = biHeight;
+    canvas.width = biWidth;
+
+    var output = context.createImageData(canvas.width, canvas.height);
+    var outputData = output.data;
+
+    for (var h = 0; h < biHeight; h++) {
+      for (var w = 0; w < biWidth; w++) {
+        outputData[0+w*4+(biWidth*4)*h] = bitmap[1+w*4+(biWidth*4)*h];
+        outputData[1+w*4+(biWidth*4)*h] = bitmap[2+w*4+(biWidth*4)*h];
+        outputData[2+w*4+(biWidth*4)*h] = bitmap[3+w*4+(biWidth*4)*h];
+        outputData[3+w*4+(biWidth*4)*h] = bitmap[0+w*4+(biWidth*4)*h];
+
+      };
+    }
+
+    context.putImageData(output, 0, 0);
+
+    return canvas.toDataURL('image/png');
+  }
+
+
+  global.WebpManager = {
+    isWebpSupported: function () {
+      return nativeWebpSupport;
+    },
+    getPngUrlFromData: getPngUrlFromData
+  }
+})(window);
