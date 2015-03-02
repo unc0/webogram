@@ -800,7 +800,10 @@ angular.module('myApp.directives', ['myApp.filters'])
           curAnimation = false;
 
       $scope.$on('ui_history_append_new', function (e, options) {
-        if (!atBottom && !options.my) {
+        if (!atBottom && !options.my || options.noScroll) {
+          onContentLoaded(function () {
+            $(historyWrap).nanoScroller();
+          })
           return;
         }
         var curAnimated = animated &&
@@ -811,7 +814,8 @@ angular.module('myApp.directives', ['myApp.filters'])
         if (curAnimated) {
           wasH = scrollableWrap.scrollHeight;
         } else {
-          $(scrollable).css({bottom: 0});
+          var pr = parseInt($(scrollableWrap).css('paddingRight'))
+          $(scrollable).css({bottom: 0, paddingRight: pr});
           $(scrollableWrap).addClass('im_history_to_bottom');
         }
 
@@ -832,7 +836,7 @@ angular.module('myApp.directives', ['myApp.filters'])
             });
           } else {
             $(scrollableWrap).removeClass('im_history_to_bottom');
-            $(scrollable).css({bottom: ''});
+            $(scrollable).css({bottom: '', paddingRight: 0});
             scrollableWrap.scrollTop = scrollableWrap.scrollHeight;
             updateBottomizer();
           }
@@ -1119,7 +1123,7 @@ angular.module('myApp.directives', ['myApp.filters'])
           return sendOnEnter;
         },
         onMessageSubmit: onMessageSubmit,
-        onFilesPaste: onFilesPaste
+        onFilePaste: onFilePaste
       });
 
       var richTextarea = composer.richTextareaEl[0];
@@ -1204,7 +1208,9 @@ angular.module('myApp.directives', ['myApp.filters'])
           composer.setValue($scope.draftMessage.text || '');
           updateHeight();
         }
-        composer.focus();
+        if (!Config.Navigator.touch) {
+          composer.focus();
+        }
       });
 
       var sendAwaiting = false;
@@ -1214,7 +1220,9 @@ angular.module('myApp.directives', ['myApp.filters'])
       });
       $scope.$on('ui_message_send', function () {
         sendAwaiting = false;
-        focusField();
+        if (!Config.Navigator.touch) {
+          focusField();
+        }
       });
 
       function focusField () {
@@ -1223,9 +1231,9 @@ angular.module('myApp.directives', ['myApp.filters'])
         });
       }
 
-      function onFilesPaste (blobs) {
+      function onFilePaste (blob) {
         ErrorService.confirm({type: 'FILE_CLIPBOARD_PASTE'}).then(function () {
-          $scope.draftMessage.files = blobs;
+          $scope.draftMessage.files = [blob];
           $scope.draftMessage.isMedia = true;
         });
       };
@@ -1592,7 +1600,7 @@ angular.module('myApp.directives', ['myApp.filters'])
     };
 
     function link ($scope, element, attrs) {
-      var imgElement = element;
+      var imgElement = $('<img />').appendTo(element);
 
       var setSrc = function (blob) {
         if (WebpManager.isWebpSupported()) {
@@ -1605,6 +1613,10 @@ angular.module('myApp.directives', ['myApp.filters'])
       };
 
       imgElement.css({
+        width: $scope.document.thumb.width,
+        height: $scope.document.thumb.height
+      });
+      element.css({
         width: $scope.document.thumb.width,
         height: $scope.document.thumb.height
       });
@@ -2090,10 +2102,17 @@ angular.module('myApp.directives', ['myApp.filters'])
         userID = $scope.$eval(attrs.myUserLink);
         update();
       }
+      if (!attrs.noWatch) {
+        $scope.$on('user_update', function (e, updUserID) {
+          if (userID == updUserID) {
+            update();
+          }
+        });
+      }
     }
   })
 
-  .directive('myUserStatus', function ($filter, $rootScope, AppUsersManager) {
+  .directive('myUserStatus', function ($filter, AppUsersManager) {
 
     var statusFilter = $filter('userStatus'),
         ind = 0,
@@ -2125,7 +2144,7 @@ angular.module('myApp.directives', ['myApp.filters'])
         userID = newUserID;
         update();
       });
-      $rootScope.$on('user_update', function (e, updUserID) {
+      $scope.$on('user_update', function (e, updUserID) {
         if (userID == updUserID) {
           update();
         }
@@ -2133,6 +2152,46 @@ angular.module('myApp.directives', ['myApp.filters'])
       statuses[curInd] = update;
       $scope.$on('$destroy', function () {
         delete statuses[curInd];
+      });
+    }
+  })
+
+  .directive('myChatLink', function ($timeout, AppChatsManager) {
+
+    return {
+      link: link
+    };
+
+    function link($scope, element, attrs) {
+      var chatID;
+      var update = function () {
+        var chat = AppChatsManager.getChat(chatID);
+
+        element.html(
+          (chat.rTitle || '').valueOf()
+        )
+      };
+
+      if (element[0].tagName == 'A') {
+        element.on('click', function () {
+          AppChatsManager.openChat(chatID);
+        });
+      }
+
+      if (attrs.chatWatch) {
+        $scope.$watch(attrs.myChatLink, function (newChatID) {
+          chatID = newChatID;
+          update();
+        });
+      } else {
+        chatID = $scope.$eval(attrs.myChatLink);
+        update();
+      }
+
+      $scope.$on('chat_update', function (e, updChatID) {
+        if (chatID == updChatID) {
+          update();
+        }
       });
     }
   })
@@ -2297,6 +2356,8 @@ angular.module('myApp.directives', ['myApp.filters'])
       }
 
       var updatePeerPhoto = function () {
+        var curJump = ++jump;
+
         peerPhoto = peer.photo && angular.copy(peer.photo.photo_small);
 
         var hasPhoto = peerPhoto !== undefined;
@@ -2315,7 +2376,6 @@ angular.module('myApp.directives', ['myApp.filters'])
 
 
         if (hasPhoto) {
-          var curJump = ++jump;
 
           MtpApiFileManager.downloadSmallFile(peer.photo.photo_small).then(function (blob) {
             if (curJump != jump) {

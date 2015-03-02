@@ -1568,7 +1568,7 @@ img.im_message_document_thumb {
 .audio_player_title {
   display: inline-block;
   font-weight: bold;
-  max-width: 85px;
+  max-width: 100px;
   overflow: hidden;
   vertical-align: text-top;
   white-space: nowrap;
@@ -2203,11 +2203,11 @@ a.composer_emoji_btn:hover {
 .composer_rich_textarea:focus:before {
   content: none;
 }
-.composer_rich_textarea:empty:active:before,
+/*.composer_rich_textarea:empty:active:before,
 .composer_rich_textarea:empty:focus:before {
   content: attr(placeholder);
   color: #9aa2ab;
-}
+}*/
 
 .composer_rich_textarea img {
   width: 20px;

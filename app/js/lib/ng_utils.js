@@ -40,6 +40,11 @@ angular.module('izhukov.utils', [])
       return {then: function (cb) {
         return cb(result);
       }};
+    },
+    reject: function (result) {
+      return {then: function (cb, badcb) {
+        return badcb(result);
+      }};
     }
   }
 
@@ -109,7 +114,7 @@ angular.module('izhukov.utils', [])
 
   function chooseSaveFile (fileName, ext, mimeType) {
     if (!$window.chrome || !chrome.fileSystem || !chrome.fileSystem.chooseEntry) {
-      return $q.reject();
+      return qSync.reject();
     };
     var deferred = $q.defer();
 
@@ -255,7 +260,18 @@ angular.module('izhukov.utils', [])
       return;
     }
 
+    var popup = false;
+    if (window.safari) {
+      popup = window.open();
+    }
+
     getFileCorrectUrl(blob, mimeType).then(function (url) {
+      if (popup) {
+        try {
+          popup.location.href = url;
+          return;
+        } catch (e) {}
+      }
       var anchor = document.createElementNS('http://www.w3.org/1999/xhtml', 'a');
       anchor.href = url;
       anchor.target  = '_blank';
@@ -311,9 +327,17 @@ angular.module('izhukov.utils', [])
   var dbVersion = 1;
   var openDbPromise;
   var storageIsAvailable = $window.indexedDB !== undefined &&
-                           $window.IDBTransaction !== undefined &&
-                           navigator.userAgent.indexOf('Safari') == -1;
-                           // As of Safari 8.0 IndexedDB is REALLY slow, no point in it
+                           $window.IDBTransaction !== undefined;
+
+  // IndexedDB is REALLY slow without blob support in Safari 8, no point in it
+  if (storageIsAvailable &&
+      navigator.userAgent.indexOf('Safari') != -1 &&
+      navigator.userAgent.indexOf('Chrome') == -1
+      // && navigator.userAgent.match(/Version\/([67]|8.0.[012])/)
+  ) {
+    storageIsAvailable = false;
+  }
+
   var storeBlobsAvailable = storageIsAvailable || false;
 
   function isAvailable () {
@@ -799,6 +823,10 @@ angular.module('izhukov.utils', [])
   function onEvent (e) {
     // console.log('event', e.type);
     if (e.type == 'mousemove') {
+      var e = e.originalEvent || e;
+      if (e && e.movementX === 0 && e.movementY === 0) {
+        return;
+      }
       $($window).off('mousemove', onEvent);
     }
     var isIDLE = e.type == 'blur' || e.type == 'timeout' ? true : false;

@@ -898,6 +898,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
 
     var peerID,
         peerHistory = false,
+        unreadAfterIdle = false,
         hasMore = false,
         hasLess = false,
         maxID = 0,
@@ -960,10 +961,6 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       }
       if (pos > -1) {
         history = $scope.peerHistories[pos];
-        // if (pos) {
-        //   $scope.peerHistories.splice(pos, 1);
-        //   $scope.peerHistories.unshift(history);
-        // }
         return history;
       }
       history = {peerID: peerID, messages: []};
@@ -1097,7 +1094,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       moreActive = true;
 
       var curJump = jump,
-          curMoreJump = moreJump,
+          curMoreJump = ++moreJump,
           inputMediaFilter = $scope.historyFilter.mediaType && {_: inputMediaFilters[$scope.historyFilter.mediaType]},
           limit = Config.Mobile ? 20 : 0,
           getMessagesPromise = inputMediaFilter
@@ -1397,21 +1394,34 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       }
       // console.log('append', addedMessage);
       // console.trace();
-      history.messages.push(AppMessagesManager.wrapForHistory(addedMessage.messageID));
+      var historyMessage = AppMessagesManager.wrapForHistory(addedMessage.messageID);
+      history.messages.push(historyMessage);
       if (AppMessagesManager.regroupWrappedHistory(history.messages, -3)) {
         $scope.$broadcast('messages_regroup');
       }
 
       if (curPeer) {
         $scope.historyState.typing.splice(0, $scope.historyState.typing.length);
-        $scope.$broadcast('ui_history_append_new', {my: addedMessage.my});
+        $scope.$broadcast('ui_history_append_new', {
+          my: addedMessage.my,
+          noScroll: unreadAfterIdle && !historyMessage.out && $rootScope.idle.isIDLE
+        });
         if (addedMessage.my && $scope.historyUnreadAfter) {
           delete $scope.historyUnreadAfter;
           $scope.$broadcast('messages_unread_after');
         }
 
-        // console.log('append check', $rootScope.idle.isIDLE, addedMessage.peerID, $scope.curDialog.peerID);
-        if (!$rootScope.idle.isIDLE) {
+        // console.log('append check', $rootScope.idle.isIDLE, addedMessage.peerID, $scope.curDialog.peerID, historyMessage, history.messages[history.messages.length - 2]);
+        if ($rootScope.idle.isIDLE) {
+          if (historyMessage.unread &&
+              !historyMessage.out &&
+              !(history.messages[history.messages.length - 2] || {}).unread) {
+
+            $scope.historyUnreadAfter = historyMessage.id;
+            unreadAfterIdle = true;
+            $scope.$broadcast('messages_unread_after');
+          }
+        } else {
           $timeout(function () {
             AppMessagesManager.readHistory($scope.curDialog.inputPeer);
           });
@@ -1488,6 +1498,9 @@ angular.module('myApp.controllers', ['myApp.i18n'])
     $rootScope.$watch('idle.isIDLE', function (newVal) {
       if (!newVal && $scope.curDialog && $scope.curDialog.peerID && !$scope.historyFilter.mediaType && !$scope.skippedHistory) {
         AppMessagesManager.readHistory($scope.curDialog.inputPeer);
+      }
+      if (!newVal) {
+        unreadAfterIdle = false;
       }
     });
 
@@ -2544,7 +2557,7 @@ angular.module('myApp.controllers', ['myApp.i18n'])
       });
     };
 
-    Storage.get('notify_nodesktop', 'notify_nosound', 'send_ctrlenter', 'notify_volume', 'notify_novibrate').then(function (settings) {
+    Storage.get('notify_nodesktop', 'notify_nosound', 'send_ctrlenter', 'notify_volume', 'notify_novibrate', 'notify_nopreview').then(function (settings) {
       $scope.notify.desktop = !settings[0];
       $scope.send.enter = settings[2] ? '' : '1';
 
@@ -2558,6 +2571,8 @@ angular.module('myApp.controllers', ['myApp.i18n'])
 
       $scope.notify.canVibrate = NotificationsManager.getVibrateSupport();
       $scope.notify.vibrate = !settings[4];
+
+      $scope.notify.preview = !settings[5];
 
       $scope.notify.volumeOf4 = function () {
         return 1 + Math.ceil(($scope.notify.volume - 0.1) / 0.33);
@@ -2594,6 +2609,16 @@ angular.module('myApp.controllers', ['myApp.i18n'])
           Storage.remove('notify_nodesktop');
         } else {
           Storage.set({notify_nodesktop: true});
+        }
+      }
+
+      $scope.togglePreview = function () {
+        $scope.notify.preview = !$scope.notify.preview;
+
+        if ($scope.notify.preview) {
+          Storage.remove('notify_nopreview');
+        } else {
+          Storage.set({notify_nopreview: true});
         }
       }
 

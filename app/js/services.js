@@ -243,6 +243,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         expires: tsNow(true) + serverTimeOffset + 60,
         wasStatus: wasStatus
       };
+      user.sortStatus = getUserStatusForSort(user.status);
       $rootScope.$broadcast('user_update', id);
     }
   }
@@ -364,6 +365,23 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     });
   };
 
+  function setUserStatus (userID, offline) {
+    var user = users[userID];
+    if (user) {
+      var status = offline ? {
+          _: 'userStatusOffline',
+          was_online: tsNow(true) + serverTimeOffset
+        } : {
+          _: 'userStatusOnline',
+          expires: tsNow(true) + serverTimeOffset + 500
+        };
+
+      user.status = status;
+      user.sortStatus = getUserStatusForSort(user.status);
+      $rootScope.$broadcast('user_update', userID);
+    }
+  }
+
 
   $rootScope.$on('apiUpdate', function (e, update) {
     // console.log('on apiUpdate', update);
@@ -373,7 +391,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
             user = users[userID];
         if (user) {
           user.status = update.status;
-          user.sortStatus = getUserStatusForSort(update.status);
+          user.sortStatus = getUserStatusForSort(user.status);
           $rootScope.$broadcast('user_update', userID);
         }
         break;
@@ -407,6 +425,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     saveApiUser: saveApiUser,
     getUser: getUser,
     getUserInput: getUserInput,
+    setUserStatus: setUserStatus,
     forceUserOnline: forceUserOnline,
     getUserPhoto: getUserPhoto,
     getUserString: getUserString,
@@ -870,7 +889,9 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
           if (message.unread && !message.out) {
             NotificationsManager.getPeerMuted(peerID).then(function (muted) {
               if (!muted) {
-                notifyAboutMessage(message);
+                Storage.get('notify_nopreview').then(function (no_preview) {
+                  notifyAboutMessage(message, no_preview);
+                });
               }
             });
           }
@@ -1147,6 +1168,11 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         count: foundCount,
         history: foundMsgs
       };
+    }, function (error) {
+      if (error.code == 400) {
+        error.handled = true;
+      }
+      return $q.reject(error);
     });
   }
 
@@ -1340,7 +1366,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         id: messageID,
         from_id: fromID,
         to_id: AppPeersManager.getOutputPeer(peerID),
-        flags: 3,
+        flags: peerID == fromID ? 0 : 3,
         date: tsNow(true) + serverTimeOffset,
         message: text,
         random_id: randomIDS,
@@ -1459,7 +1485,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         id: messageID,
         from_id: fromID,
         to_id: AppPeersManager.getOutputPeer(peerID),
-        flags: 3,
+        flags: peerID == fromID ? 0 : 3,
         date: tsNow(true) + serverTimeOffset,
         message: '',
         media: media,
@@ -1613,7 +1639,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         id: messageID,
         from_id: fromID,
         to_id: AppPeersManager.getOutputPeer(peerID),
-        flags: 3,
+        flags: peerID == fromID ? 0 : 3,
         date: tsNow(true) + serverTimeOffset,
         message: '',
         media: media,
@@ -1948,6 +1974,15 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         }
       }
 
+      if (curMessage.fwd_from_id &&
+          curMessage.media &&
+          curMessage.media.document &&
+          curMessage.media.document.sticker &&
+          (curMessage.from_id != (prevMessage || {}).from_id || !(prevMessage || {}).fwd_from_id)) {
+        delete curMessage.fwd_from_id;
+        curMessage._ = 'message';
+      }
+
       if (prevMessage &&
           curMessage.from_id == prevMessage.from_id &&
           !prevMessage.fwd_from_id == !curMessage.fwd_from_id &&
@@ -2007,7 +2042,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     }
   }
 
-  function notifyAboutMessage (message) {
+  function notifyAboutMessage (message, no_preview) {
     var peerID = getMessagePeer(message);
     var fromUser = AppUsersManager.getUser(message.from_id);
     var fromPhoto = AppUsersManager.getUserPhoto(message.from_id, 'User');
@@ -2017,7 +2052,11 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         notificationPhoto;
 
     if (message.message) {
-      notificationMessage = RichTextProcessor.wrapPlainText(message.message);
+      if (no_preview) {
+        notificationMessage = _('conversation_message_sent');
+      } else {
+        notificationMessage = RichTextProcessor.wrapPlainText(message.message);
+      }
     } else if (message.media) {
       switch (message.media._) {
         case 'messageMediaPhoto': notificationMessage = _('conversation_media_photo_raw'); break;
@@ -2057,6 +2096,9 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       notification.title = (fromUser.first_name || '') +
                            (fromUser.first_name && fromUser.last_name ? ' ' : '') +
                            (fromUser.last_name || '');
+      if (!notification.title) {
+        notification.title = fromUser.phone || _('conversation_unknown_user_raw');
+      }
 
       notificationPhoto = fromPhoto;
 
@@ -2203,7 +2245,9 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
           setTimeout(function () {
             isMutedPromise.then(function (muted) {
               if (message.unread && !muted) {
-                notifyAboutMessage(message);
+                Storage.get('notify_nopreview').then(function (no_preview) {
+                  notifyAboutMessage(message, no_preview);
+                });
               }
             })
           }, timeout);
@@ -2562,6 +2606,11 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         });
       }
     }, function () {
+      var cachedBlob = MtpApiFileManager.getCachedFile(inputFileLocation);
+      if (cachedBlob) {
+        return FileManager.download(cachedBlob, mimeType, fileName);
+      }
+
       MtpApiFileManager.downloadFile(
         fullPhotoSize.location.dc_id, inputFileLocation, fullPhotoSize.size, {mime: mimeType}
       ).then(function (blob) {
@@ -2588,7 +2637,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 })
 
 
-.service('AppVideoManager', function ($sce, $rootScope, $modal, $window, MtpApiFileManager, AppUsersManager, FileManager) {
+.service('AppVideoManager', function ($sce, $rootScope, $modal, $window, MtpApiFileManager, AppUsersManager, FileManager, qSync) {
   var videos = {},
       videosForHistory = {},
       windowW = $(window).width(),
@@ -2714,6 +2763,13 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
           access_hash: video.access_hash
         };
 
+    if (historyVideo.downloaded && !toFileEntry) {
+      var cachedBlob = MtpApiFileManager.getCachedFile(inputFileLocation);
+      if (cachedBlob) {
+        return qSync.when(cachedBlob);
+      }
+    }
+
     historyVideo.progress = {enabled: !historyVideo.downloaded, percent: 1, total: video.size};
 
     var downloadPromise = MtpApiFileManager.downloadFile(video.dc_id, inputFileLocation, video.size, {
@@ -2774,7 +2830,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   }
 })
 
-.service('AppDocsManager', function ($sce, $rootScope, $modal, $window, $q, RichTextProcessor, MtpApiFileManager, FileManager) {
+.service('AppDocsManager', function ($sce, $rootScope, $modal, $window, $q, RichTextProcessor, MtpApiFileManager, FileManager, qSync) {
   var docs = {},
       docsForHistory = {},
       windowW = $(window).width(),
@@ -2814,6 +2870,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
           break;
       }
     });
+    apiDoc.file_name = apiDoc.file_name || '';
   };
 
   function getDoc (docID) {
@@ -2888,8 +2945,6 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
           access_hash: doc.access_hash
         };
 
-    // historyDoc.progress = {enabled: true, percent: 10, total: doc.size};
-
     if (historyDoc.downloaded === undefined) {
       MtpApiFileManager.getDownloadedFile(inputFileLocation, doc.size).then(function () {
         historyDoc.downloaded = true;
@@ -2907,6 +2962,13 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
           id: docID,
           access_hash: doc.access_hash
         };
+
+    if (historyDoc.downloaded && !toFileEntry) {
+      var cachedBlob = MtpApiFileManager.getCachedFile(inputFileLocation);
+      if (cachedBlob) {
+        return qSync.when(cachedBlob);
+      }
+    }
 
     historyDoc.progress = {enabled: !historyDoc.downloaded, percent: 1, total: doc.size};
 
@@ -2981,7 +3043,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   }
 })
 
-.service('AppAudioManager', function ($sce, $rootScope, $modal, $window, MtpApiFileManager, FileManager) {
+.service('AppAudioManager', function ($sce, $rootScope, $modal, $window, MtpApiFileManager, FileManager, qSync) {
   var audios = {};
   var audiosForHistory = {};
 
@@ -3028,6 +3090,13 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
           id: audioID,
           access_hash: audio.access_hash
         };
+
+    if (historyAudio.downloaded && !toFileEntry) {
+      var cachedBlob = MtpApiFileManager.getCachedFile(inputFileLocation);
+      if (cachedBlob) {
+        return qSync.when(cachedBlob);
+      }
+    }
 
     historyAudio.progress = {enabled: !historyAudio.downloaded, percent: 1, total: audio.size};
 
@@ -3448,15 +3517,15 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
 .service('RichTextProcessor', function ($sce, $sanitize) {
 
-  var emojiUtf = [],
-      emojiMap = {},
+  var emojiMap = {},
       emojiData = Config.Emoji,
       emojiIconSize = 18,
       emojiSupported = navigator.userAgent.search(/OS X|iPhone|iPad|iOS|Android/i) != -1,
       emojiCode;
 
+  var emojiRegex = '\\u0023\\u20E3|\\u00a9|\\u00ae|\\u203c|\\u2049|\\u2139|[\\u2194-\\u2199]|\\u21a9|\\u21aa|\\u231a|\\u231b|\\u23e9|[\\u23ea-\\u23ec]|\\u23f0|\\u24c2|\\u25aa|\\u25ab|\\u25b6|\\u2611|\\u2614|\\u26fd|\\u2705|\\u2709|[\\u2795-\\u2797]|\\u27a1|\\u27b0|\\u27bf|\\u2934|\\u2935|[\\u2b05-\\u2b07]|\\u2b1b|\\u2b1c|\\u2b50|\\u2b55|\\u3030|\\u303d|\\u3297|\\u3299|[\\uE000-\\uF8FF\\u270A-\\u2764\\u2122\\u25C0\\u25FB-\\u25FE\\u2615\\u263a\\u2648-\\u2653\\u2660-\\u2668\\u267B\\u267F\\u2693\\u261d\\u26A0-\\u26FA\\u2708\\u2702\\u2601\\u260E]|[\\u2600\\u26C4\\u26BE\\u23F3\\u2764]|\\uD83D[\\uDC00-\\uDFFF]|\\uD83C[\\uDDE8-\\uDDFA\uDDEC]\\uD83C[\\uDDEA-\\uDDFA\uDDE7]|[0-9]\\u20e3|\\uD83C[\\uDC00-\\uDFFF]';
+
   for (emojiCode in emojiData) {
-    emojiUtf.push(emojiData[emojiCode][0]);
     emojiMap[emojiData[emojiCode][0]] = emojiCode;
   }
 
@@ -3487,8 +3556,30 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
                         "\\uffa1-\\uffdc";                  // half width Hangul (Korean)
 
   var regexAlphaNumericChars  = "0-9\.\_" + regexAlphaChars;
-  var regExp = new RegExp('(^|\\s)((?:https?://)?telegram\\.me/|@)([a-zA-Z\\d_]{5,32})|((?:(ftp|https?)://|(?:mailto:)?([A-Za-z0-9._%+-]+@))(\\S*\\.\\S*[^\\s.;,(){}<>"\']))|(\\n)|(' + emojiUtf.join('|') + ')|(^|\\s)(#[' + regexAlphaNumericChars + ']{2,20})', 'i');
 
+  // Based on Regular Expression for URL validation by Diego Perini
+  var urlRegex =  "((?:https?|ftp)://|mailto:)?" +
+    // user:pass authentication
+    "(?:\\S+(?::\\S*)?@)?" +
+    "(?:" +
+      // sindresorhus/ip-regex
+      "(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])(?:\\.(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])){3}" +
+    "|" +
+      // host name
+      "(?:(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)" +
+      // domain name
+      "(?:\\.(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)*" +
+      // TLD identifier
+      "(?:\\.(xn--[0-9a-z]{2,16}|[a-z\\u00a1-\\uffff]{2,24}))" +
+    ")" +
+    // port number
+    "(?::\\d{2,5})?" +
+    // resource path
+    "(?:/(?:\\S*[^\\s.;,(\\[\\]{}<>\"'])?)?";
+
+  var regExp = new RegExp('(^|\\s)((?:https?://)?telegram\\.me/|@)([a-zA-Z\\d_]{5,32})|(' + urlRegex + ')|(\\n)|(' + emojiRegex + ')|(^|\\s)(#[' + regexAlphaNumericChars + ']{2,20})', 'i');
+
+  var emailRegex = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
   var youtubeRegex = /^(?:https?:\/\/)?(?:www\.)?youtu(?:|\.be|be\.com|\.b)(?:\/v\/|\/watch\\?v=|e\/|(?:\/\??#)?\/watch(?:.+)v=)(.{11})(?:\&[^\s]*)?/;
   var vimeoRegex = /^(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/;
   var instagramRegex = /^https?:\/\/(?:instagr\.am\/p\/|instagram\.com\/p\/)([a-zA-Z0-9\-\_]+)/i;
@@ -3525,8 +3616,6 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
     options = options || {};
 
-    text = text.replace(/\ufe0f/g, '', text);
-
     var match,
         raw = text,
         html = [],
@@ -3535,8 +3624,9 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         emojiTitle,
         emojiCoords;
 
+    // var start = tsNow();
+
     while ((match = raw.match(regExp))) {
-      // console.log(2, match);
       html.push(encodeEntities(raw.substr(0, match.index)));
 
       if (match[3]) { // telegram.me links
@@ -3556,45 +3646,72 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
           );
         }
       }
-      else if (match[4]) { // URL
+      else if (match[4]) { // URL & e-mail
         if (!options.noLinks) {
-          if (match[6]) {
+          if (emailRegex.test(match[4])) {
             html.push(
               '<a href="',
-              encodeEntities('mailto:' + match[6] + match[7]),
-              '" class="js-external-link">',
-              encodeEntities(match[6] + match[7]),
+              encodeEntities('mailto:' + match[4]),
+              '" target="_blank">',
+              encodeEntities(match[4]),
               '</a>'
             );
           } else {
-            var url = match[5] + '://' + match[7];
-            html.push(
-              '<a href="',
-              encodeEntities(url),
-              '" class="js-external-link">',
-              encodeEntities(url),
-              '</a>'
-            );
-            if (options.extractUrlEmbed &&
-                !options.extractedUrlEmbed) {
-              options.extractedUrlEmbed = findExternalEmbed(url);
+            var url = false,
+                protocol = match[5],
+                tld = match[6],
+                excluded = '';
+
+            if (tld) {
+              if (!protocol && (tld.substr(0, 4) === 'xn--' || Config.TLD.indexOf(tld.toLowerCase()) !== -1)) {
+                protocol = 'http://';
+              }
+
+              if (protocol) {
+                var balanced = checkBrackets(match[4]);
+
+                if (balanced.length !== match[4].length) {
+                  excluded = match[4].substring(balanced.length);
+                  match[4] = balanced;
+                }
+
+                url = (match[5] ? '' : protocol) + match[4];
+              }
+            } else { // IP address
+              url = (match[5] ? '' : 'http://') + match[4];
+            }
+
+            if (url) {
+              html.push(
+                '<a href="',
+                encodeEntities(url),
+                '" class="js-external-link">',
+                encodeEntities(match[4]),
+                '</a>',
+                excluded
+              );
+
+              if (options.extractUrlEmbed &&
+                  !options.extractedUrlEmbed) {
+                options.extractedUrlEmbed = findExternalEmbed(url);
+              }
+            } else {
+              html.push(encodeEntities(match[0]));
             }
           }
         } else {
           html.push(encodeEntities(match[0]));
         }
-
       }
-      else if (match[8]) { // New line
+      else if (match[7]) { // New line
         if (!options.noLinebreaks) {
           html.push('<br/>');
         } else {
           html.push(' ');
         }
       }
-      else if (match[9]) {
-
-        if ((emojiCode = emojiMap[match[9]]) &&
+      else if (match[8]) {
+        if ((emojiCode = emojiMap[match[8]]) &&
             (emojiCoords = getEmojiSpritesheetCoords(emojiCode))) {
 
           emojiTitle = encodeEntities(emojiData[emojiCode][1][0]);
@@ -3611,23 +3728,21 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
             ':', emojiTitle, ':</span>'
           );
         } else {
-          html.push(encodeEntities(match[9]));
+          html.push(encodeEntities(match[8]));
         }
       }
-      else if (match[11]) {
+      else if (match[10]) {
         if (!options.noLinks) {
           html.push(
-            match[10],
             '<a href="#/im?q=',
-            encodeURIComponent(match[11]),
+            encodeURIComponent(match[10]),
             '">',
-            encodeEntities(match[11]),
+            encodeEntities(match[10]),
             '</a>'
           );
         } else {
           html.push(
-            match[10],
-            encodeEntities(match[11])
+            encodeEntities(match[10])
           );
         }
       }
@@ -3636,11 +3751,17 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
     html.push(encodeEntities(raw));
 
+    // var timeDiff = tsNow() - start;
+    // if (timeDiff > 1) {
+    //   console.log(dT(), 'wrap text', text.length, timeDiff);
+    // }
+
     text = $sanitize(html.join(''));
 
     // console.log(3, text, html);
 
     if (emojiFound) {
+      text = text.replace(/\ufe0f|&#65039;/g, '', text);
       text = text.replace(/<span class="emoji emoji-(\d)-(\d+)-(\d+)"(.+?)<\/span>/g,
                           '<span class="emoji emoji-spritesheet-$1" style="background-position: -$2px -$3px;" $4</span>');
     }
@@ -3648,7 +3769,24 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     return $sce.trustAs('html', text);
   }
 
-  function findExternalEmbed (url) {
+  function checkBrackets(url) {
+    var urlLength = url.length,
+        urlOpenBrackets = url.split('(').length - 1,
+        urlCloseBrackets = url.split(')').length - 1;
+
+    while (urlCloseBrackets > urlOpenBrackets &&
+           url.charAt(urlLength - 1) === ')') {
+      url = url.substr(0, urlLength - 1);
+      urlCloseBrackets--;
+      urlLength--;
+    }
+    if (urlOpenBrackets > urlCloseBrackets) {
+      url = url.replace(/\)+$/, '');
+    }
+    return url;
+  }
+
+  function findExternalEmbed(url) {
     var embedUrlMatches,
         result;
 
@@ -3709,8 +3847,8 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     while ((match = raw.match(regExp))) {
       text.push(raw.substr(0, match.index));
 
-      if (match[9]) {
-        if ((emojiCode = emojiMap[match[9]]) &&
+      if (match[8]) {
+        if ((emojiCode = emojiMap[match[8]]) &&
             (emojiTitle = emojiData[emojiCode][1][0])) {
           text.push(':' + emojiTitle + ':');
         } else {
@@ -3728,10 +3866,10 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
 })
 
-.service('StatusManager', function ($timeout, $rootScope, MtpApiManager, IdleManager) {
+.service('StatusManager', function ($timeout, $rootScope, MtpApiManager, AppUsersManager, IdleManager) {
 
   var toPromise;
-  var lastOnlineUpdated = 0
+  var lastOnlineUpdated = 0;
   var started = false;
   var myID = 0;
   var myOtherDeviceActive = false;
@@ -3767,6 +3905,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       return;
     }
     lastOnlineUpdated = offline ? 0 : date;
+    AppUsersManager.setUserStatus(myID, offline);
     return MtpApiManager.invokeApi('account.updateStatus', {
       offline: offline
     }, {noErrorBox: true});
@@ -3822,6 +3961,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   var langNotificationsPluralize = _.pluralize('page_title_pluralize_notifications');
 
   var titleBackup = document.title,
+      titleChanged = false,
       titlePromise;
   var prevFavicon;
 
@@ -3832,6 +3972,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     if (!Config.Navigator.mobile) {
       $interval.cancel(titlePromise);
       if (!newVal) {
+        titleChanged = false;
         document.title = titleBackup;
         setFavicon();
       } else {
@@ -3840,9 +3981,13 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         titlePromise = $interval(function () {
           var time = tsNow();
           if (!notificationsCount || time % 2000 > 1000) {
-            document.title = titleBackup;
-            setFavicon();
+            if (titleChanged) {
+              titleChanged = false;
+              document.title = titleBackup;
+              setFavicon();
+            }
           } else {
+            titleChanged = true;
             document.title = langNotificationsPluralize(notificationsCount);
             setFavicon('favicon_unread.ico');
           }

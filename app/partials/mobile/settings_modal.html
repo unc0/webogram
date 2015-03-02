@@ -59,7 +59,7 @@
       </a>
 
       <div class="mobile_user_modal_info_wrap clearfix">
-        <h4 class="mobile_user_modal_header" ng-bind-html="profile.rFullName"></h4>
+        <h4 class="mobile_user_modal_header" my-user-link="profile.id"></h4>
         <p class="mobile_user_modal_status" my-user-status="::profile.id"></p>
       </div>
 
@@ -80,6 +80,13 @@
       <a class="mobile_modal_action tg_checkbox clearfix" ng-click="toggleDesktop()" ng-class="notify.desktop ? 'tg_checkbox_on' : ''">
         <span class="icon icon-checkbox-outer"><i class="icon-checkbox-inner"></i></span>
         <span class="tg_checkbox_label" my-i18n="settings_modal_notification_alert"></span>
+      </a>
+    </div>
+
+    <div class="mobile_modal_action_wrap">
+      <a class="mobile_modal_action tg_checkbox clearfix" ng-click="togglePreview()" ng-class="notify.preview ? 'tg_checkbox_on' : ''">
+        <span class="icon icon-checkbox-outer"><i class="icon-checkbox-inner"></i></span>
+        <span class="tg_checkbox_label" my-i18n="settings_modal_message_preview"></span>
       </a>
     </div>
 
