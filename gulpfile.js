@@ -239,7 +239,7 @@ gulp.task('nw', function () {
     files: './dist/**',
     macIcns: './nw-icons/macosx.icns',
     macPlist: {mac_bundle_id: 'myPkg'},
-    platforms: ['win', 'osx']
+    platforms: ['win']
   });
 
   // Log stuff you want
