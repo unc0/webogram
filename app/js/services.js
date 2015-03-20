@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.4.1 - messaging web application for MTProto
+ * Webogram v0.4.2 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -18,12 +18,16 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       contactsFillPromise,
       contactsList,
       contactsIndex = SearchIndexManager.createIndex(),
+      myID,
       serverTimeOffset = 0;
 
   Storage.get('server_time_offset').then(function (to) {
     if (to) {
       serverTimeOffset = to;
     }
+  });
+  MtpApiManager.getUserID().then(function (id) {
+    myID = id;
   });
 
   function fillContacts () {
@@ -169,6 +173,10 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       return id;
     }
     return users[id] || {id: id, deleted: true, num: 1};
+  }
+
+  function getSelf() {
+    return getUser(myID);
   }
 
   function hasUser(id) {
@@ -424,6 +432,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     saveApiUsers: saveApiUsers,
     saveApiUser: saveApiUser,
     getUser: getUser,
+    getSelf: getSelf,
     getUserInput: getUserInput,
     setUserStatus: setUserStatus,
     forceUserOnline: forceUserOnline,
@@ -1239,16 +1248,14 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   }
 
   function processAffectedHistory (inputPeer, affectedHistory, method) {
-    if (!ApiUpdatesManager.processUpdateMessage({
-        _: 'updateShort',
-        update: {
-          _: 'updatePts',
-          pts: affectedHistory.pts,
-          pts_count: affectedHistory.pts_count
-        }
-      })) {
-      return false;
-    }
+    ApiUpdatesManager.processUpdateMessage({
+      _: 'updateShort',
+      update: {
+        _: 'updatePts',
+        pts: affectedHistory.pts,
+        pts_count: affectedHistory.pts_count
+      }
+    });
     if (!affectedHistory.offset) {
       return $q.when();
     }
@@ -1571,12 +1578,17 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         $rootScope.$broadcast('messages_pending');
       }
 
+      var uploaded = false,
+          uploadPromise;
+
       message.send = function () {
         var sendFileDeferred = $q.defer();
 
         sendFilePromise.then(function () {
-          var uploaded = false,
-              uploadPromise = MtpApiFileManager.uploadFile(file);
+          if (!uploaded || message.error) {
+            uploaded = false;
+            uploadPromise = MtpApiFileManager.uploadFile(file);
+          }
 
           uploadPromise.then(function (inputFile) {
             inputFile.name = apiFileName;
@@ -1628,6 +1640,14 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
                 }]
               });
             }, function (error) {
+              if (attachType == 'photo' &&
+                  error.code == 400 &&
+                  error.type == 'PHOTO_INVALID_DIMENSIONS') {
+                error.handled = true;
+                attachType = 'document';
+                message.send();
+                return;
+              }
               toggleError(true);
             });
           }, function (error) {
@@ -2020,6 +2040,12 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       if (!Config.Navigator.mobile) {
         options.extractUrlEmbed = true;
       }
+      if (message.flags & 16) {
+        var user = AppUsersManager.getSelf();
+        if (user) {
+          options.highlightUsername = user.username;
+        }
+      }
       message.richMessage = RichTextProcessor.wrapRichText(message.message, options);
       if (options.extractedUrlEmbed) {
         message.richUrlEmbed = options.extractedUrlEmbed;
@@ -2229,7 +2255,10 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     notification.title = RichTextProcessor.wrapPlainText(notification.title);
 
     notification.onclick = function () {
-      $rootScope.$broadcast('history_focus', {peerString: peerString});
+      $rootScope.$broadcast('history_focus', {
+        peerString: peerString,
+        messageID: message.flags & 16 ? message.id : 0,
+      });
     };
 
     notification.message = notificationMessage;
@@ -3765,11 +3794,11 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       "(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])(?:\\.(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])){3}" +
     "|" +
       // host name
-      "(?:(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)" +
+      "(?:(?:[a-z\\u00a1-\\uffff0-9]-*)*[" + regexAlphaChars + "0-9]+)" +
       // domain name
-      "(?:\\.(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)*" +
+      "(?:\\.(?:[" + regexAlphaChars + "]-*)*[" + regexAlphaChars + "0-9]+)*" +
       // TLD identifier
-      "(?:\\.(xn--[0-9a-z]{2,16}|[a-z\\u00a1-\\uffff]{2,24}))" +
+      "(?:\\.(xn--[0-9a-z]{2,16}|[" + regexAlphaChars + "]{2,24}))" +
     ")" +
     // port number
     "(?::\\d{2,5})?" +
@@ -3787,6 +3816,8 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   var facebookRegex = /^https?:\/\/(?:www\.)?facebook\.com\/.+?\/posts\/\d+/i;
   var gplusRegex = /^https?:\/\/plus\.google\.com\/\d+\/posts\/[a-zA-Z0-9\-\_]+/i;
   var soundcloudRegex = /^https?:\/\/(?:soundcloud\.com|snd\.sc)\/([a-zA-Z0-9%\-\_]+)\/([a-zA-Z0-9%\-\_]+)/i;
+  var spotifyRegex = /(https?:\/\/(open\.spotify\.com|play\.spotify\.com|spoti\.fi)\/(.+)|spotify:(.+))/i;
+
 
   return {
     wrapRichText: wrapRichText,
@@ -3830,9 +3861,15 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
 
       if (match[3]) { // telegram.me links
         if (!options.noLinks) {
+          var attr = '';
+          if (options.highlightUsername &&
+              options.highlightUsername.toLowerCase() == match[3].toLowerCase() &&
+              match[2] == '@') {
+            attr = 'class="im_message_mymention"';
+          }
           html.push(
             match[1],
-            '<a href="#/im?p=',
+            '<a ' + attr + ' href="#/im?p=',
             encodeURIComponent('@' + match[3]),
             '">',
             encodeEntities(match[2] + match[3]),
@@ -4010,6 +4047,9 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
           badSubfolders.indexOf(embedUrlMatches[2]) == -1) {
         return ['soundcloud', embedUrlMatches[0]];
       }
+    }
+    else if (embedUrlMatches = url.match(spotifyRegex)) {
+      return ['spotify', embedUrlMatches[3].replace('/', ':')];
     }
 
     if (!Config.Modes.chrome_packed) { // Need external JS

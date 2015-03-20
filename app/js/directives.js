@@ -1,5 +1,5 @@
 /*!
- * Webogram v0.4.1 - messaging web application for MTProto
+ * Webogram v0.4.2 - messaging web application for MTProto
  * https://github.com/zhukov/webogram
  * Copyright (C) 2014 Igor Zhukov <igor.beatle@gmail.com>
  * https://github.com/zhukov/webogram/blob/master/LICENSE
@@ -223,6 +223,13 @@ angular.module('myApp.directives', ['myApp.filters'])
           html = '<div class="im_message_media_embed im_message_soundcloud_embed"><' + embedTag + ' type="text/html" frameborder="0" ' +
                 'src="https://w.soundcloud.com/player/?url=' + encodeEntities(encodeURIComponent(soundcloudUrl)) +
                 '&amp;auto_play=false&amp;hide_related=true&amp;show_comments=false&amp;show_user=true&amp;show_reposts=false&amp;visual=true"></' + embedTag + '></div>';
+          break;
+
+        case 'spotify':
+          var spotifyUrl = embedData[1];
+          html = '<div class="im_message_media_embed im_message_spotify_embed"><' + embedTag + ' type="text/html" frameborder="0" allowtransparency="true" ' +
+           'src="https://embed.spotify.com/?uri=spotify:' + encodeEntities(encodeURIComponent(spotifyUrl)) +
+           '"></' + embedTag + '></div>';
           break;
 
         case 'twitter':

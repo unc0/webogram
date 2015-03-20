@@ -1398,6 +1398,10 @@ div.im_message_video_thumb {
 .im_message_soundcloud_embed {
   padding-bottom: 56.25%; /* 16/9 ratio */
 }
+.im_message_spotify_embed {
+  width: 300px;
+  height: 80px;
+}
 .im_message_media_embed iframe,
 .im_message_media_embed webview {
   position: absolute;
@@ -1838,6 +1842,11 @@ a.im_message_fwd_photo {
 .im_message_text {
   word-wrap: break-word;
   line-height: 150%;
+}
+.im_message_mymention {
+  background: #FFF8CC;
+  /*border-bottom: 1px solid #FFE222;*/
+  /*font-weight: bold;*/
 }
 
 .im_history_not_selected,
