@@ -141,7 +141,7 @@ angular.module('myApp.directives', ['myApp.filters'])
         applyUnreadAfter();
         deregisterUnreadAfter = $scope.$on('messages_unread_after', applyUnreadAfter);
       }
-      if ($scope.historyMessage.unread) {
+      if ($scope.historyMessage.unread && $scope.historyMessage.out) {
         element.addClass(unreadClass);
         var deregisterUnread = $scope.$on('messages_read', function () {
           if (!$scope.historyMessage.unread) {
@@ -888,7 +888,7 @@ angular.module('myApp.directives', ['myApp.filters'])
         if (options.idleScroll) {
           onContentLoaded(function () {
             $(historyWrap).nanoScroller();
-            changeScroll();
+            changeScroll(true);
           });
           return;
         }
@@ -929,11 +929,12 @@ angular.module('myApp.directives', ['myApp.filters'])
         });
       });
 
-      function changeScroll () {
+      function changeScroll (noFocus) {
         var unreadSplit, focusMessage;
 
         // console.trace('change scroll');
-        if (focusMessage = $('.im_message_focus:visible', scrollableWrap)[0]) {
+        if (!noFocus &&
+            (focusMessage = $('.im_message_focus:visible', scrollableWrap)[0])) {
           var ch = scrollableWrap.clientHeight,
               st = scrollableWrap.scrollTop,
               ot = focusMessage.offsetTop,
@@ -979,6 +980,7 @@ angular.module('myApp.directives', ['myApp.filters'])
 
       $scope.$on('ui_history_focus', function () {
         if (!atBottom) {
+          // console.log(dT(), 'scroll history focus');
           scrollableWrap.scrollTop = scrollableWrap.scrollHeight;
           updateScroller();
           atBottom = true;
@@ -1124,6 +1126,7 @@ angular.module('myApp.directives', ['myApp.filters'])
         if (heightOnly === true) return;
         if (atBottom) {
           onContentLoaded(function () {
+            // console.log('change scroll bottom');
             scrollableWrap.scrollTop = scrollableWrap.scrollHeight;
             updateScroller();
           });
@@ -1390,6 +1393,7 @@ angular.module('myApp.directives', ['myApp.filters'])
 
           if (e.type == 'dragenter' || e.type == 'dragover') {
             if (dragStateChanged) {
+              $(emojiButton).hide();
               $(dropbox)
                 .css({height: messageFieldWrap.offsetHeight + 2, width: messageFieldWrap.offsetWidth})
                 .show();
@@ -1403,6 +1407,7 @@ angular.module('myApp.directives', ['myApp.filters'])
             }
             dragTimeout = setTimeout(function () {
               $(dropbox).hide();
+              $(emojiButton).show();
               dragStarted = false;
               dragTimeout = false;
             }, 300);

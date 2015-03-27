@@ -976,6 +976,9 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       historyStorage.count = historyResult.count || historyResult.messages.length;
 
       var offset = 0;
+      if (!maxID && historyResult.messages.length) {
+        maxID = historyResult.messages[0].id + 1;
+      }
       if (maxID > 0) {
         for (offset = 0; offset < historyStorage.history.length; offset++) {
           if (maxID > historyStorage.history[offset]) {
@@ -1006,16 +1009,12 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         offset = 0,
         offsetNotFound = false,
         unreadOffset = false,
-        unreadSkip = false,
-        resultPending = [];
+        unreadSkip = false;
 
     prerendered = prerendered ? Math.min(50, prerendered) : 0;
 
     if (historyStorage === undefined) {
       historyStorage = historiesStorage[peerID] = {count: null, history: [], pending: []};
-    }
-    else if (!maxID && historyStorage.pending.length) {
-      resultPending = historyStorage.pending.slice();
     }
 
     if (!limit && !maxID) {
@@ -1056,9 +1055,13 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       } else {
         limit = limit || (offset ? 20 : (prerendered || 5));
       }
+      var history = historyStorage.history.slice(offset, offset + limit);
+      if (!maxID && historyStorage.pending.length) {
+        history = historyStorage.pending.slice().concat(history);
+      }
       return $q.when({
         count: historyStorage.count,
-        history: resultPending.concat(historyStorage.history.slice(offset, offset + limit)),
+        history: history,
         unreadOffset: unreadOffset,
         unreadSkip: unreadSkip
       });
@@ -1082,10 +1085,13 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         angular.forEach(historyResult.messages, function (message) {
           history.push(message.id);
         });
+        if (!maxID && historyStorage.pending.length) {
+          history = historyStorage.pending.slice().concat(history);
+        }
 
         return {
           count: historyStorage.count,
-          history: resultPending.concat(history),
+          history: history,
           unreadOffset: unreadOffset,
           unreadSkip: unreadSkip
         };
@@ -1102,9 +1108,14 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         }
       }
 
+      var history = historyStorage.history.slice(offset, offset + limit);
+      if (!maxID && historyStorage.pending.length) {
+        history = historyStorage.pending.slice().concat(history);
+      }
+
       return {
         count: historyStorage.count,
-        history: resultPending.concat(historyStorage.history.slice(offset, offset + limit)),
+        history: history,
         unreadOffset: unreadOffset,
         unreadSkip: unreadSkip
       };
@@ -1833,7 +1844,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       var peerID = pendingData[0],
           tempID = pendingData[1],
           historyStorage = historiesStorage[peerID],
-          i;
+          pos = historyStorage.pending.indexOf(tempID);
 
       ApiUpdatesManager.processUpdateMessage({
         _: 'updateShort',
@@ -1843,16 +1854,12 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         }
       });
 
-      for (i = 0; i < historyStorage.pending.length; i++) {
-        if (historyStorage.pending[i] == tempID) {
-          historyStorage.pending.splice(i, 1);
-          break;
-        }
+      if (pos != -1) {
+        historyStorage.pending.splice(pos, 1);
       }
 
       delete messagesForHistory[tempID];
       delete messagesStorage[tempID];
-
 
       return true;
     }
@@ -1868,17 +1875,13 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
       var peerID = pendingData[0],
           tempID = pendingData[1],
           historyStorage = historiesStorage[peerID],
-          index = false,
-          message = false,
-          historyMessage = false,
-          i;
+          message,
+          historyMessage;
 
       // console.log('pending', randomID, historyStorage.pending);
-      for (i = 0; i < historyStorage.pending.length; i++) {
-        if (historyStorage.pending[i] == tempID) {
-          historyStorage.pending.splice(i, 1);
-          break;
-        }
+      var pos = historyStorage.pending.indexOf(tempID);
+      if (pos != -1) {
+        historyStorage.pending.splice(pos, 1);
       }
 
       if (message = messagesStorage[tempID]) {
@@ -2315,17 +2318,15 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
             historyStorage = historiesStorage[peerID];
 
         if (historyStorage !== undefined) {
-          var topMsgID = historiesStorage[peerID].history[0];
           if (historiesStorage[peerID].history.indexOf(message.id) != -1) {
             return false;
           }
-          else {
-            historyStorage.history.unshift(message.id);
-            if (message.id > 0 && message.id < topMsgID || true) {
-              historyStorage.history.sort(function (a, b) {
-                return b - a;
-              });
-            }
+          var topMsgID = historiesStorage[peerID].history[0];
+          historyStorage.history.unshift(message.id);
+          if (message.id > 0 && message.id < topMsgID) {
+            historyStorage.history.sort(function (a, b) {
+              return b - a;
+            });
           }
         } else {
           historyStorage = historiesStorage[peerID] = {count: null, history: [message.id], pending: []};
@@ -3805,7 +3806,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
     // resource path
     "(?:/(?:\\S*[^\\s.;,(\\[\\]{}<>\"'])?)?";
 
-  var regExp = new RegExp('(^|\\s)((?:https?://)?telegram\\.me/|@)([a-zA-Z\\d_]{5,32})|(' + urlRegex + ')|(\\n)|(' + emojiRegex + ')|(^|\\s)(#[' + regexAlphaNumericChars + ']{2,20})', 'i');
+  var regExp = new RegExp('(^|\\s)((?:https?://)?telegram\\.me/|@)([a-zA-Z\\d_]{5,32})|(' + urlRegex + ')|(\\n)|(' + emojiRegex + ')|(^|\\s)(#[' + regexAlphaNumericChars + ']{2,64})', 'i');
 
   var emailRegex = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
   var youtubeRegex = /^(?:https?:\/\/)?(?:www\.)?youtu(?:|\.be|be\.com|\.b)(?:\/v\/|\/watch\\?v=|e\/|(?:\/\??#)?\/watch(?:.+)v=)(.{11})(?:\&[^\s]*)?/;
@@ -3813,7 +3814,7 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
   var instagramRegex = /^https?:\/\/(?:instagr\.am\/p\/|instagram\.com\/p\/)([a-zA-Z0-9\-\_]+)/i;
   var vineRegex = /^https?:\/\/vine\.co\/v\/([a-zA-Z0-9\-\_]+)/i;
   var twitterRegex = /^https?:\/\/twitter\.com\/.+?\/status\/\d+/i;
-  var facebookRegex = /^https?:\/\/(?:www\.)?facebook\.com\/.+?\/posts\/\d+/i;
+  var facebookRegex = /^https?:\/\/(?:www\.|m\.)?facebook\.com\/(?:.+?\/posts\/\d+|(?:story\.php|permalink\.php)\?story_fbid=(\d+)(?:&substory_index=\d+)?&id=(\d+))/i;
   var gplusRegex = /^https?:\/\/plus\.google\.com\/\d+\/posts\/[a-zA-Z0-9\-\_]+/i;
   var soundcloudRegex = /^https?:\/\/(?:soundcloud\.com|snd\.sc)\/([a-zA-Z0-9%\-\_]+)\/([a-zA-Z0-9%\-\_]+)/i;
   var spotifyRegex = /(https?:\/\/(open\.spotify\.com|play\.spotify\.com|spoti\.fi)\/(.+)|spotify:(.+))/i;
@@ -4057,6 +4058,9 @@ angular.module('myApp.services', ['myApp.i18n', 'izhukov.utils'])
         return ['twitter', embedUrlMatches[0]];
       }
       else if (embedUrlMatches = url.match(facebookRegex)) {
+        if (embedUrlMatches[2]!= undefined){
+          return ['facebook', "https://www.facebook.com/"+embedUrlMatches[2]+"/posts/"+embedUrlMatches[1]];
+        }
         return ['facebook', embedUrlMatches[0]];
       }
       // Sorry, GPlus widget has no `xfbml.render` like callback and is too wide.
