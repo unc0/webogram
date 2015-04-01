@@ -2,27 +2,21 @@
   float: right;
   width: 12%;
   white-space: nowrap;
-  text-align: center;
+  & .icon-nwctrl {
+    font-family: "nwctrl";
+    font-size: 24px;
+    color: #FFF;
+    opacity: 0.5;
+    display: inline-block;
+    padding: 16px 7px;
+    -webkit-transition    : .2s;
+    transition            : .2s;
+    &:hover {
+      opacity: 1;
+      text-decoration: none;
+    }
+  }
 }
-
-.tg_head_nwctrl_wrap .icon-nwctrl {
-  font-family: "nwctrl";
-  font-size: 24px;
-  color: #FFF;
-  opacity: 0.5;
-  display: inline-block;
-  padding: 16px 7px;
-  -webkit-transition    : .2s;
-  -moz-transition       : .2s;
-  -o-transition         : .2s;
-  transition            : .2s;
-}
-
-.tg_head_nwctrl_wrap .icon-nwctrl:hover {
-  opacity: 1;
-  text-decoration: none;
-}
-
 
 .tg_head_nwctrl_draggable {
   height: 3px;
@@ -32,23 +26,19 @@
   background: #B9D2E5;
   border-bottom: 0px solid #7EA4C0;
   -webkit-transition    : .2s;
-  -moz-transition       : .2s;
-  -o-transition         : .2s;
   transition            : .2s;
   -webkit-app-region: drag;
   -webkit-user-select: none;
-}
-
-.tg_head_nwctrl_draggable:hover {
-  height: 20px;
-  opacity: 1;
-  background: #7EA4C0;
-  border-bottom: 1px solid #B9D2E5;
-}
-
-.tg_head_nwctrl_draggable .icon-nwctrl-expend {
-  font-family: "nwctrl";
-  font-size: 28px;
+  &:hover {
+    height: 20px;
+    opacity: 1;
+    background: #7EA4C0;
+    border-bottom: 1px solid #B9D2E5;
+  }
+  & .icon-nwctrl-expend {
+    font-family: "nwctrl";
+    font-size: 28px;
+  }
 }
 
 .icon-nwctrl-expend:before {
